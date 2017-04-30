@@ -1,9 +1,11 @@
 ////GLOBALS////
 
+/*
 var mongodb = require('mongodb');
 
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/server'; // Temp
+*/
 
 ////HANDLERS////
 
@@ -20,12 +22,14 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 	});
 });
 
+////BRAINSTORMING////
+
+/*
 // Listens for a URL change (new convo)
 chrome.tabs.onUpdated.addListener(function() {
 	// Do something
 });
-
-////MAIN////
+*/
 
 /*
 // Establish connection to server

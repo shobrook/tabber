@@ -15,6 +15,8 @@
     "js": ["jquery-3.2.1.min.js", "content.js"]
   }],
   "browser_action": {
-    "default_icon": "icon.png"
+    "default_icon": "icon.png",
+    "default_title": "pinheart",
+    "default_popup": "popup.html"
   }
 }
