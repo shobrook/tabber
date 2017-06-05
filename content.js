@@ -122,8 +122,10 @@ var payload = function() {
 	
 	}
 
-	var selection = selectMessages();
+	console.log(selectMessages());
+//	var selection = selectMessages();
 
+/*
 	// Opens long-lived channel b/w content script and extension
 	var port = chrome.runtime.connect(window.localStorage.getItem('messagebook-id'), {name: "selected-messages"});
 	port.postMessage({messages: selection});
@@ -132,6 +134,7 @@ var payload = function() {
   		console.log("Status: " + response.status);
 	
 	});
+*/
 
 }
 
@@ -149,7 +152,7 @@ var inject = function() {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 	if (request.message == "clicked_browser_action") {
-		console.log("Browser action has been clicked.");
+		console.log("User clicked browser action.");
 		inject();
 	}
 
