@@ -11,68 +11,68 @@ console.log("Extension ID: " + window.localStorage.getItem('messagebook-id'));
 var payload = function() {
 
 	var scrapeMessages = function() {
-	
+
 		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
-		
+
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
-	
+
 			if (child.tagName == 'DIV' && child.id.length > 0) {
 				child.childNodes.forEach(function(c) {
-	
+
 					if (c.tagName == 'DIV') {
 						var msgWrapperNodes = c.childNodes[0].getElementsByClassName('clearfix');
-	
+
 						for (var i = 0; i < msgWrapperNodes.length; i++) {
 							var msgNode = msgWrapperNodes[i].childNodes[0].childNodes[0];
-							
+
 							// Detects if message is rich media content
 							if (msgNode == undefined || msgNode == null) continue;
-		
-							var messageContents = msgNode.innerHTML; // TO-DO: Get rid of <span> tags
+
+							var messageContents = msgNode.innerHTML; // TODO: Get rid of <span> tags
 							var sender = 0; // 0 for sent, 1 for received
-							// TO-DO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
+							// TODO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
 							var position = msgNode.getBoundingClientRect();
 
 							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
-	
+
 				});
 			}
 
 		});
-		
+
 		return scrapedMessages;
-	
+
 	}
 
 	var selectMessages = function() {
-		
+
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
 		var messages = []; // All loaded messages in the form [{"sender": sender, "message": messageContents, "coordinates": [x, y]}, ...]
 
 		var onMouseDown = function(e) {
 
 			region.initial = [e.pageX, e.pageY]; // Pushes initial coordinates to region array
-	
-			// TO-DO: Create a selection div using clip-path somehow (good luck @Matthew)
-			// TO-DO: Update width and height of selection div as mouse moves
-	
+
+			// TODO: Create a selection div using clip-path somehow (good luck @Matthew)
+			// TODO: Update width and height of selection div as mouse moves
+
 		}
-	
+
 		var toggle = false;
 		var onMouseUp = function(e) {
-	
+
 			region.final = [e.pageX, e.pageY]; // Pushes final coordinates to region array
 
-			// TO-DO: Remove selection div
-	
+			// TODO: Remove selection div
+
 			messages = scrapeMessages();
 			toggle = true;
-	
+
 		}
-	
+
 		var div = document.createElement('div'); div.id = "wrapper";
 		div.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute; cursor: crosshair;";
 		div.addEventListener("mousedown", function(e) { onMouseDown(e); }, false);
@@ -81,13 +81,13 @@ var payload = function() {
 
 		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
 
-		// Testing purposes only (TO-DO: Call the below code once toggle is true)
+		// Testing purposes only (TODO: Call the below code once toggle is true)
 		setTimeout(function() {
 
 			if (toggle) {
 				var child = document.getElementById("wrapper");
 				document.body.removeChild(child);
-			
+
 				// Filter messages through region bounds and append to selectedMessages
 				messages.forEach(function(m) {
 
@@ -119,7 +119,7 @@ var payload = function() {
 		}, 10000);
 
 		return selectedMessages;
-	
+
 	}
 
 	console.log(selectMessages());
@@ -132,7 +132,7 @@ var payload = function() {
 	port.onMessage.addListener(function(response) {
 
   		console.log("Status: " + response.status);
-	
+
 	});
 */
 
