@@ -34,7 +34,7 @@ var payload = function() {
 							// TO-DO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
 							var position = msgNode.getBoundingClientRect();
 
-							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left, position.top]});
+							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
 	
@@ -49,12 +49,12 @@ var payload = function() {
 
 	var selectMessages = function() {
 		
-		var region = []; // Coordinate bounds of selection region
+		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
 		var messages = []; // All loaded messages in the form [{"sender": sender, "message": messageContents, "coordinates": [x, y]}, ...]
 
 		var onMouseDown = function(e) {
 
-			region.push([e.pageX, e.pageY]); // Pushes initial coordinates to region array
+			region.initial = [e.pageX, e.pageY]; // Pushes initial coordinates to region array
 	
 			// TO-DO: Create a selection div using clip-path somehow (good luck @Matthew)
 			// TO-DO: Update width and height of selection div as mouse moves
@@ -64,7 +64,7 @@ var payload = function() {
 		var toggle = false;
 		var onMouseUp = function(e) {
 	
-			region.push([e.pageX, e.pageY]); // Pushes final coordinates to region array
+			region.final = [e.pageX, e.pageY]; // Pushes final coordinates to region array
 
 			// TO-DO: Remove selection div
 	
@@ -79,49 +79,46 @@ var payload = function() {
 		div.addEventListener("mouseup", function(e) { onMouseUp(e); }, false);
 		document.body.appendChild(div); // Imposes a low-opacity "canvas" on entire page
 
+		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
+
 		// Testing purposes only (TO-DO: Call the below code once toggle is true)
 		setTimeout(function() {
 
 			if (toggle) {
-				var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
-			
 				var child = document.getElementById("wrapper");
 				document.body.removeChild(child);
 			
-				// Filter messages through region bounds and append to selectedMessages (TO-DO: Fix this)
+				// Filter messages through region bounds and append to selectedMessages
 				messages.forEach(function(m) {
 
-					console.log(m.coordinates); // Testing
-					console.log(region); // Testing
-
-					if (region[0][0] < region[1][0] && region[0][1] > region[1][1]) {
-						if ((m.coordinates[0] >= region[0][0] && m.coordinates[0] <= region[1][0]) &&
-							(m.coordinates[1] <= region[0][1] && m.coordinates[1] >= region[1][1])) {
-							selectedMessages.push(m);
+					if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
+						if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
+							(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
+							selectedMessages.push(m.message);
 						}
-					} else if (region[0][0] < region[1][0] && region[0][1] < region[1][1]) {
-						if ((m.coordinates[0] >= region[0][0] && m.coordinates[0] <= region[1][0]) &&
-							(m.coordinates[1] >= region[0][1] && m.coordinates[1] <= region[1][1])) {
-							selectedMessages.push(m);
+					} else if (region.initial[0] < region.final[0] && region.initial[1] > region.final[1]) {
+						if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
+							(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
+							selectedMessages.push(m.message);
 						}
-					} else if (region[0][0] > region[1][0] && region[0][1] < region[1][1]) {
-						if ((m.coordinates[0] >= region[1][0] && m.coordinates[0] <= region[0][0]) &&
-							(m.coordinates[1] <= region[1][1] && m.coordinates[1] >= region[0][1])) {
-							selectedMessages.push(m);
+					} else if (region.initial[0] > region.final[0] && region.initial[1] > region.final[1]) {
+						if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
+							(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
+							selectedMessages.push(m.message);
 						}
-					} else if (region[0][0] > region[1][0] && region[0][1] > region[1][1]) {
-						if ((m.coordinates[0] >= region[1][0] && m.coordinates[0] <= region[0][0]) &&
-							(m.coordinates[1] >= region[1][1] && m.coordinates[1] <= region[0][1])) {
-							selectedMessages.push(m);
+					} else if (region.initial[0] > region.final[0] && region.initial[1] < region.final[1]) {
+						if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
+							(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
+							selectedMessages.push(m.message);
 						}
 					}
 
 				});
-
-				return selectedMessages;
 			}
 
 		}, 10000);
+
+		return selectedMessages;
 	
 	}
 
