@@ -29,9 +29,11 @@ var payload = function() {
 							// Detects if message is rich media content
 							if (msgNode == undefined || msgNode == null) continue;
 		
-							var messageContents = msgNode.innerHTML; // TO-DO: Get rid of <span> tags
+							var messageContents = msgNode.textContent;
 							var sender = 0; // 0 for sent, 1 for received
-							// TO-DO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
+							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)") {
+								sender = 1;
+							}
 							var position = msgNode.getBoundingClientRect();
 
 							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
@@ -74,7 +76,7 @@ var payload = function() {
 		}
 	
 		var div = document.createElement('div'); div.id = "wrapper";
-		div.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute; cursor: crosshair;";
+		div.style = "cursor: crosshair; background-color: rgba(78,84,91,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 		div.addEventListener("mousedown", function(e) { onMouseDown(e); }, false);
 		div.addEventListener("mouseup", function(e) { onMouseUp(e); }, false);
 		document.body.appendChild(div); // Imposes a low-opacity "canvas" on entire page
