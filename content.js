@@ -1,138 +1,169 @@
 ////GLOBALS////
 
-/* Nothin' here yet */
+var injected = false;
 
 ////MAIN////
 
-console.log("Initializing messagebook.");
-window.localStorage.setItem('messagebook-id', chrome.runtime.id);
-console.log("Extension ID: " + window.localStorage.getItem('messagebook-id'));
+// TODO: Refactor so that when user clicks button again, they can select more messages but injection doesn't occur
+
+console.log("Initializing tabber.");
+window.localStorage.setItem('tabber-id', chrome.runtime.id);
+console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
 var payload = function() {
 
-	var scrapeMessages = function() {
-	
+	var scrapeAllMessages = function() {
+
 		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
-		
+
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
-	
+
 			if (child.tagName == 'DIV' && child.id.length > 0) {
 				child.childNodes.forEach(function(c) {
-	
+
 					if (c.tagName == 'DIV') {
 						var msgWrapperNodes = c.childNodes[0].getElementsByClassName('clearfix');
-	
+
 						for (var i = 0; i < msgWrapperNodes.length; i++) {
 							var msgNode = msgWrapperNodes[i].childNodes[0].childNodes[0];
-							
+
 							// Detects if message is rich media content
 							if (msgNode == undefined || msgNode == null) continue;
-		
-							var messageContents = msgNode.innerHTML; // TO-DO: Get rid of <span> tags
+
+							var messageContents = msgNode.innerHTML; // TODO: Get rid of <span> tags
 							var sender = 0; // 0 for sent, 1 for received
-							// TO-DO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
+							// TODO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
 							var position = msgNode.getBoundingClientRect();
 
 							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
-	
 				});
 			}
-
 		});
-		
 		return scrapedMessages;
-	
 	}
 
-	var selectMessages = function() {
-		
+	var selectMessages = function(callback) {
+
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
 		var messages = []; // All loaded messages in the form [{"sender": sender, "message": messageContents, "coordinates": [x, y]}, ...]
 
-		var onMouseDown = function(e) {
-
-			region.initial = [e.pageX, e.pageY]; // Pushes initial coordinates to region array
-	
-			// TO-DO: Create a selection div using clip-path somehow (good luck @Matthew)
-			// TO-DO: Update width and height of selection div as mouse moves
-	
+		var startMask = function(e) {
+			region.initial = [e.pageX, e.pageY]; // Records initial coordinates in region array
+			// Creates "hole" in mask and attaches resize listener
+			tabber_clip.setAttribute("x", e.pageX);
+			tabber_clip.setAttribute("y", e.pageY);
+			tabber_clip.setAttribute("width", "0");
+			tabber_clip.setAttribute("height", "0");
+			tabber_mask.addEventListener("mousemove", resizeMask, false);
 		}
-	
-		var toggle = false;
-		var onMouseUp = function(e) {
-	
-			region.final = [e.pageX, e.pageY]; // Pushes final coordinates to region array
 
-			// TO-DO: Remove selection div
-	
-			messages = scrapeMessages();
-			toggle = true;
-	
+		var resizeMask = function(e) {
+			// x
+			if (e.pageX - region.initial[0] > 0) tabber_clip.setAttribute("width", e.pageX - region.initial[0]);
+			else {
+				tabber_clip.setAttribute("x", e.pageX);
+				tabber_clip.setAttribute("width", region.initial[0] - e.pageX);
+			}
+			// y
+			if (e.pageY - region.initial[1] > 0) tabber_clip.setAttribute("height", e.pageY - region.initial[1]);
+			else {
+				tabber_clip.setAttribute("y", e.pageY);
+				tabber_clip.setAttribute("height", region.initial[1] - e.pageY);
+			}
 		}
-	
-		var div = document.createElement('div'); div.id = "wrapper";
-		div.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute; cursor: crosshair;";
-		div.addEventListener("mousedown", function(e) { onMouseDown(e); }, false);
-		div.addEventListener("mouseup", function(e) { onMouseUp(e); }, false);
-		document.body.appendChild(div); // Imposes a low-opacity "canvas" on entire page
 
+		var endMask = function(e) {
+			region.final = [e.pageX, e.pageY]; // Records final coordinates in region array
+			tabber_mask.removeEventListener("mousemove", resizeMask, false);
+
+			// NOTE: Naive cleanup. More to do based on how we handle user actions
+			tabber_mask.parentNode.removeChild(tabber_mask);
+
+			filterMessages();
+		}
+
+		// NOTE: Change this to change where mask is placed
+		var mask_target = document.body; // document.body for whole page
+
+		var svg_defs = `<svg id="tabber_svg" width="100%" height="100%">
+						<defs>
+							<mask id="Mask">
+								<rect width="100%" height="100%" fill="#fff" />
+								<rect id="clip" x="0" y="0" width="0" height="0" fill="#000"></rect>
+							</mask>
+						</defs>
+						<rect id="mask" x="0" y="0" width="100%" height="100%" fill="black" opacity =".5" mask="url(#Mask)"/>
+						</svg>`;
+
+		$(mask_target).insertAdjacentHTML("beforeend", svg_defs);
+		var tabber_svg = document.getElementById("tabber_svg");
+		tabber_svg.style.position = "fixed";
+		tabber_svg.style.top = "0";
+		tabber_svg.style.left = "0";
+
+		messages = scrapeAllMessages();
+
+		var tabber_mask = document.getElementById("mask");
+		var tabber_clip = document.getElementById("clip");
+
+		// Allows user to interact with mask
+		tabber_mask.addEventListener("mousedown", startMask, false);
+		tabber_mask.addEventListener("mouseup", endMask, false);
+
+		// NOTE: Place this here for cumulative reselects
 		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
 
-		// Testing purposes only (TO-DO: Call the below code once toggle is true)
-		setTimeout(function() {
+		var filterMessages = function() {
 
-			if (toggle) {
-				var child = document.getElementById("wrapper");
-				document.body.removeChild(child);
-			
-				// Filter messages through region bounds and append to selectedMessages
-				messages.forEach(function(m) {
+			// NOTE: Place this here for non-cumulative reselects
+			// var selectedMessages = [];
 
-					if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
-						if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
-							(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-							selectedMessages.push(m.message);
-						}
-					} else if (region.initial[0] < region.final[0] && region.initial[1] > region.final[1]) {
-						if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
-							(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-							selectedMessages.push(m.message);
-						}
-					} else if (region.initial[0] > region.final[0] && region.initial[1] > region.final[1]) {
-						if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
-							(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-							selectedMessages.push(m.message);
-						}
-					} else if (region.initial[0] > region.final[0] && region.initial[1] < region.final[1]) {
-						if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
-							(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-							selectedMessages.push(m.message);
-						}
+			// Filter messages through region bounds and append to selectedMessages
+			// TODO: Should we grab messages that are partially within mask? Only works if message's top left is inside
+			messages.forEach(function(m) {
+
+				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
+					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
+						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
+						selectedMessages.push(m.message);
 					}
-
-				});
-			}
-
-		}, 10000);
-
-		return selectedMessages;
-	
+				} else if (region.initial[0] < region.final[0] && region.initial[1] > region.final[1]) {
+					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
+						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
+						selectedMessages.push(m.message);
+					}
+				} else if (region.initial[0] > region.final[0] && region.initial[1] > region.final[1]) {
+					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
+						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
+						selectedMessages.push(m.message);
+					}
+				} else if (region.initial[0] > region.final[0] && region.initial[1] < region.final[1]) {
+					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
+						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
+						selectedMessages.push(m.message);
+					}
+				}
+			});
+			callback(selectedMessages);
+		}
 	}
 
-	console.log(selectMessages());
-//	var selection = selectMessages();
+	selectMessages(function(selectedMessages) {
+		// TODO: Next step goes here
+		console.log(selectedMessages);
+	});
 
 /*
 	// Opens long-lived channel b/w content script and extension
-	var port = chrome.runtime.connect(window.localStorage.getItem('messagebook-id'), {name: "selected-messages"});
+	var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "selected-messages"});
 	port.postMessage({messages: selection});
 	port.onMessage.addListener(function(response) {
 
   		console.log("Status: " + response.status);
-	
+
 	});
 */
 
@@ -148,14 +179,12 @@ var inject = function() {
 }
 
 // TO-DO: Handle on-click event for the browser action
-
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-
-	if (request.message == "clicked_browser_action") {
+	if (request.message == "clicked_browser_action" && !injected) {
 		console.log("User clicked browser action.");
+		injected = true;
 		inject();
 	}
-
 });
 
 ////BRAINSTORMING////
