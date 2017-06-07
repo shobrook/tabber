@@ -1,6 +1,6 @@
 ////GLOBALS////
 
-var injected = false;
+injected = false;
 
 ////MAIN////
 
@@ -49,8 +49,39 @@ var payload = function() {
 
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
 		var messages = []; // All loaded messages in the form [{"sender": sender, "message": messageContents, "coordinates": [x, y]}, ...]
+		var tabber_svg, tabber_mask, tabber_clip; // Masking animation shared variables
+
+		var initSVG = function() {
+			console.log("initSVG");
+			// NOTE: Change this to change where mask is placed
+			var mask_target = document.body; // document.body for whole page
+
+			var svg_defs = `<svg id="tabber_svg" width="100%" height="100%">
+							<defs>
+								<mask id="Mask">
+									<rect width="100%" height="100%" fill="#fff" />
+									<rect id="clip" x="0" y="0" width="0" height="0" fill="#000"></rect>
+								</mask>
+							</defs>
+							<rect id="mask" x="0" y="0" width="100%" height="100%" fill="black" opacity =".5" mask="url(#Mask)"/>
+							</svg>`;
+
+			$(mask_target).insertAdjacentHTML("beforeend", svg_defs);
+			tabber_svg = document.getElementById("tabber_svg");
+			tabber_svg.style.position = "fixed";
+			tabber_svg.style.top = "0";
+			tabber_svg.style.left = "0";
+
+			tabber_mask = document.getElementById("mask");
+			tabber_clip = document.getElementById("clip");
+
+			// Allows user to interact with mask
+			tabber_mask.addEventListener("mousedown", startMask, false);
+			tabber_mask.addEventListener("mouseup", endMask, false);
+		}
 
 		var startMask = function(e) {
+
 			region.initial = [e.pageX, e.pageY]; // Records initial coordinates in region array
 			// Creates "hole" in mask and attaches resize listener
 			tabber_clip.setAttribute("x", e.pageX);
@@ -80,38 +111,16 @@ var payload = function() {
 			tabber_mask.removeEventListener("mousemove", resizeMask, false);
 
 			// NOTE: Naive cleanup. More to do based on how we handle user actions
-			tabber_mask.parentNode.removeChild(tabber_mask);
+			// tabber_mask.parentNode.removeChild(tabber_mask);
+			// tabber_clip.parentNode.removeChild(tabber_clip);
+			tabber_svg.parentNode.removeChild(tabber_svg);
 
 			filterMessages();
 		}
 
-		// NOTE: Change this to change where mask is placed
-		var mask_target = document.body; // document.body for whole page
-
-		var svg_defs = `<svg id="tabber_svg" width="100%" height="100%">
-						<defs>
-							<mask id="Mask">
-								<rect width="100%" height="100%" fill="#fff" />
-								<rect id="clip" x="0" y="0" width="0" height="0" fill="#000"></rect>
-							</mask>
-						</defs>
-						<rect id="mask" x="0" y="0" width="100%" height="100%" fill="black" opacity =".5" mask="url(#Mask)"/>
-						</svg>`;
-
-		$(mask_target).insertAdjacentHTML("beforeend", svg_defs);
-		var tabber_svg = document.getElementById("tabber_svg");
-		tabber_svg.style.position = "fixed";
-		tabber_svg.style.top = "0";
-		tabber_svg.style.left = "0";
+		initSVG();
 
 		messages = scrapeAllMessages();
-
-		var tabber_mask = document.getElementById("mask");
-		var tabber_clip = document.getElementById("clip");
-
-		// Allows user to interact with mask
-		tabber_mask.addEventListener("mousedown", startMask, false);
-		tabber_mask.addEventListener("mouseup", endMask, false);
 
 		// NOTE: Place this here for cumulative reselects
 		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
@@ -151,40 +160,33 @@ var payload = function() {
 		}
 	}
 
-	selectMessages(function(selectedMessages) {
-		// TODO: Next step goes here
-		console.log(selectedMessages);
+	window.addEventListener('message', function(event) {
+		if (event.data.type && event.data.type == "tabber_run") {
+			console.log("Content script received: " + event.data.text);
+			selectMessages(function(selectedMessages) {
+				// TODO: Next step goes here
+				console.log(selectedMessages);
+			});
+		}
 	});
-
-/*
-	// Opens long-lived channel b/w content script and extension
-	var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "selected-messages"});
-	port.postMessage({messages: selection});
-	port.onMessage.addListener(function(response) {
-
-  		console.log("Status: " + response.status);
-
-	});
-*/
-
 }
 
 // Prepares the JS injection
 var inject = function() {
-
 	var script = document.createElement('script');
 	script.textContent = "(" + payload.toString() + ")();";
+	// script.textContent = payload.toString() + "";
 	document.head.appendChild(script);
-
 }
 
-// TO-DO: Handle on-click event for the browser action
+// TODO: Handle on-click event for the browser action
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request.message == "clicked_browser_action" && !injected) {
-		console.log("User clicked browser action.");
+		console.log("User clicked browser action for first time. Injecting stuff.");
 		injected = true;
 		inject();
 	}
+	window.postMessage({type: 'tabber_run', text: 'run the damn script'}, '*' );
 });
 
 ////BRAINSTORMING////
