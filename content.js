@@ -31,9 +31,11 @@ var payload = function() {
 							// Detects if message is rich media content
 							if (msgNode == undefined || msgNode == null) continue;
 
-							var messageContents = msgNode.innerHTML; // TODO: Get rid of <span> tags
+							var messageContents = msgNode.textContent;
 							var sender = 0; // 0 for sent, 1 for received
-							// TODO: Check previous div's backgroundColor attribute (#f1f0f0) and change sender accordingly
+							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)") {
+								sender = 1;
+							}
 							var position = msgNode.getBoundingClientRect();
 
 							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
@@ -71,6 +73,8 @@ var payload = function() {
 			tabber_svg.style.position = "fixed";
 			tabber_svg.style.top = "0";
 			tabber_svg.style.left = "0";
+			tabber_svg.style.zIndex = "2147483647";
+			tabber_svg.style.cursor = "crosshair";
 
 			tabber_mask = document.getElementById("mask");
 			tabber_clip = document.getElementById("clip");
@@ -122,13 +126,9 @@ var payload = function() {
 
 		messages = scrapeAllMessages();
 
-		// NOTE: Place this here for cumulative reselects
 		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
 
 		var filterMessages = function() {
-
-			// NOTE: Place this here for non-cumulative reselects
-			// var selectedMessages = [];
 
 			// Filter messages through region bounds and append to selectedMessages
 			// TODO: Should we grab messages that are partially within mask? Only works if message's top left is inside
