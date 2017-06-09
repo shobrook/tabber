@@ -9,25 +9,20 @@ window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
 var payload = function() {
-
 	var scrapeAllMessages = function() {
-
 		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
 
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
-
 			if (child.tagName == 'DIV' && child.id.length > 0) {
 				child.childNodes.forEach(function(c) {
-
 					if (c.tagName == 'DIV') {
 						var msgWrapperNodes = c.childNodes[0].getElementsByClassName('clearfix');
 
 						for (var i = 0; i < msgWrapperNodes.length; i++) {
 							var msgNode = msgWrapperNodes[i].childNodes[0].childNodes[0];
 
-							// Detects if message is rich media content
-							if (msgNode == undefined || msgNode == null) continue;
+							if (msgNode == undefined || msgNode == null) continue; // Detects if message is rich media content
 
 							var messageContents = msgNode.textContent;
 							var sender = 0; // 0 for sent, 1 for received
@@ -39,24 +34,19 @@ var payload = function() {
 							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
-
 				});
 			}
-
 		});
 
 		return scrapedMessages;
-
 	}
 
 	var selectMessages = function(callback) {
-
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
-		var messages = []; // All loaded messages in the form [{"sender": sender, "message": messageContents, "coordinates": [x, y]}, ...]
+		var messages = []; // All loaded messages including sender and coordinates
 		var tabber_svg, tabber_mask, tabber_clip; // Masking animation shared variables
 
 		var initSVG = function() {
-
 			console.log("Initializing canvas.");
 
 			// NOTE: Change this to change where mask is placed
@@ -86,11 +76,9 @@ var payload = function() {
 			// Allows user to interact with mask
 			tabber_mask.addEventListener("mousedown", startMask, false);
 			tabber_mask.addEventListener("mouseup", endMask, false);
-
 		}
 
 		var startMask = function(e) {
-
 			region.initial = [e.pageX, e.pageY]; // Records initial coordinates in region array
 
 			// Creates "hole" in mask and attaches resize listener
@@ -99,11 +87,9 @@ var payload = function() {
 			tabber_clip.setAttribute("width", "0");
 			tabber_clip.setAttribute("height", "0");
 			tabber_mask.addEventListener("mousemove", resizeMask, false);
-
 		}
 
 		var resizeMask = function(e) {
-
 			if (e.pageX - region.initial[0] > 0) tabber_clip.setAttribute("width", e.pageX - region.initial[0]);
 			else {
 				tabber_clip.setAttribute("x", e.pageX);
@@ -115,11 +101,9 @@ var payload = function() {
 				tabber_clip.setAttribute("y", e.pageY);
 				tabber_clip.setAttribute("height", region.initial[1] - e.pageY);
 			}
-
 		}
 
 		var endMask = function(e) {
-
 			region.final = [e.pageX, e.pageY]; // Records final coordinates in region array
 			tabber_mask.removeEventListener("mousemove", resizeMask, false);
 
@@ -129,7 +113,6 @@ var payload = function() {
 			tabber_svg.parentNode.removeChild(tabber_svg);
 
 			filterMessages();
-
 		}
 
 		initSVG();
@@ -139,10 +122,8 @@ var payload = function() {
 
 		// Filters messages through region bounds and append to selectedMessages
 		var filterMessages = function() {
-
 			// TODO: Should we grab messages that are partially within mask? Only works if message's top left is inside
 			messages.forEach(function(m) {
-
 				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
 						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
@@ -164,28 +145,24 @@ var payload = function() {
 						selectedMessages.push({"sender": m.sender, "message": m.message});
 					}
 				}
-
 			});
 
 			callback(selectedMessages);
-
 		}
-
 	}
 
 	window.addEventListener('message', function(event) {
-
 		if (event.data.type && event.data.type == "tabber_run") {
 			console.log("Content script received: " + event.data.text);
-			selectMessages(function(selectedMessages) {
 
+			selectMessages(function(selectedMessages) {
 				console.log(selectedMessages);
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
 				var form_defs = `<form id="saveForm">
 									<label for="name"> Name: </label>
-				    			<input type="text" id="nameInput" name="name" placeholder="Message Thumbnail" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
+				    			<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
 
 				    			<label for="folder"> Folder: </label>
 				    			<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
@@ -214,10 +191,8 @@ var payload = function() {
 				// HTML generator for selected messages preview
 				var messagePreview = "";
 				selectedMessages.forEach(function(m) {
-
-					if (m.sender == 1) messagePreview += "<p style='color: #7B7F84;'> " + m.message + " </p>";
-					else messagePreview += "<p style='color: #2C9ED4;'> " + m.message + " </p>";
-
+					if (m.sender == 1) messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.message + " </p>";
+					else messagePreview += "<p style='color: #2C9ED4; margin: 0;'> " + m.message + " </p>";
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
 
@@ -230,48 +205,46 @@ var payload = function() {
 				var cancelForm = document.getElementById("cancelButton");
 
 				saveForm.onsubmit = function() {
-
 					var name = document.getElementById("saveForm").name.value;
 					var folder = document.getElementById("saveForm").folder.value;
 
-					// TODO: Send name + folder to background script
-					console.log(name + " " + folder);
+					// TODO: Detect whether user created new folder
+					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "newFolder": 0, "messages": selectedMessages}}, '*');
 
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
-
 				}
 
 				cancelForm.onclick = function() {
-
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
-
 				}
-
 			});
 		}
-
 	});
-
 }
 
 // Prepares the JS injection
 var inject = function() {
-
 	var script = document.createElement('script');
 	script.textContent = "(" + payload.toString() + ")();";
 	document.head.appendChild(script);
-
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-
 	if (request.message == "clicked_browser_action" && !injected) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
 		injected = true;
 		inject();
 	}
 	window.postMessage({type: 'tabber_run', text: 'run the damn script'}, '*' );
+});
 
+// Opens long-lived connection b/w content and background
+var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
+window.addEventListener('message', function(event) {
+	if (event.data.type && event.data.type == "dialog_input") {
+		console.log("Content script received: " + event.data.text.name + " " + event.data.text.folder);
+		port.postMessage({messages: {name: event.data.text.name, folder: event.data.text.folder, content: event.data.text.messages}});
+	}
 });
