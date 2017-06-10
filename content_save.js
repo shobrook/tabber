@@ -5,6 +5,7 @@ injected = false;
 ////MAIN////
 
 console.log("Initializing tabber.");
+console.log("Initializing tabber content save.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
@@ -237,7 +238,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		injected = true;
 		inject();
 	}
-	window.postMessage({type: 'tabber_run', text: 'run the damn script'}, '*' );
+	if (request.message == "clicked_browser_action")
+		window.postMessage({type: 'tabber_run', text: 'run the damn script'}, '*' );
 });
 
 // Opens long-lived connection b/w content and background
