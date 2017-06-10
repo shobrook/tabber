@@ -12,11 +12,13 @@
       "http://www.messenger.com/*",
       "https://www.messenger.com/*"
     ],
-    "js": ["jquery-3.2.1.min.js", "content.js"]
+    "js": ["jquery-3.2.1.min.js", "content_save.js", "content_manager.js"]
   }],
   "browser_action": {
     "default_icon": "icon.png",
     "default_title": "messagebook"
-    //"default_popup": "popup.html"
-  }
+  },
+  "permissions": [
+    "contextMenus"
+  ]
 }
