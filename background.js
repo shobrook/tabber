@@ -19,3 +19,15 @@ chrome.runtime.onConnect.addListener(function(port) {
 		console.log(msg.messages);
   });
 });
+
+// Creates and handles "Find Messages" in context menu
+chrome.contextMenus.create({
+	title: "Find Messages",
+	contexts: ["browser_action"],
+	onclick: function () {
+		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+			var activeTab = tabs[0];
+			chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_find_messages"});
+		});
+	}
+});
