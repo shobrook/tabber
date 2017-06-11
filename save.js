@@ -5,7 +5,6 @@ injected = false;
 ////MAIN////
 
 console.log("Initializing tabber.");
-console.log("Initializing tabber content save.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
@@ -39,6 +38,7 @@ var payload = function() {
 			}
 		});
 
+		console.log("Scraped all loaded messages.");
 		return scrapedMessages;
 	}
 
@@ -114,6 +114,7 @@ var payload = function() {
 			tabber_svg.parentNode.removeChild(tabber_svg);
 
 			filterMessages();
+			console.log("Filtered scraped messages through selection bounds.")
 		}
 
 		initSVG();
@@ -154,10 +155,14 @@ var payload = function() {
 
 	window.addEventListener('message', function(event) {
 		if (event.data.type && event.data.type == "tabber_run") {
-			console.log("Content script received: " + event.data.text);
+			console.log("JS injection received: " + event.data.text);
 
 			selectMessages(function(selectedMessages) {
-				console.log(selectedMessages);
+				// TODO: Pull folders with the most content from messages.json
+				var folderHTML = "";
+				event.data.contents.forEach(function(f) {
+					folderHTML += "<option> " + f + " </option> ";
+				});
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
@@ -166,13 +171,9 @@ var payload = function() {
 				    			<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
 
 				    			<label for="folder"> Folder: </label>
-				    			<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
-				      			<option value="shared"> Matthew-Shared </option>
-				      			<option value="ideas"> Project Ideas </option>
-				      			<option value="insights"> Insights </option>
-				    			</select>
+				    			<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">` + folderHTML +
 
-									<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
+									`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
 				    			<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
 				  			</form>`;
 
@@ -201,6 +202,8 @@ var payload = function() {
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
+
+				console.log("Prompted saved dialog.");
 
 				var saveForm = document.getElementById("saveForm");
 				var cancelForm = document.getElementById("cancelButton");
@@ -239,14 +242,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		inject();
 	}
 	if (request.message == "clicked_browser_action")
-		window.postMessage({type: 'tabber_run', text: 'run the damn script'}, '*' );
+		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
 // Opens long-lived connection b/w content and background
 var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
-		console.log("Content script received: " + event.data.text.name + " " + event.data.text.folder);
+		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
 		port.postMessage({messages: {name: event.data.text.name, folder: event.data.text.folder, content: event.data.text.messages}});
 	}
 });
