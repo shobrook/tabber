@@ -4,12 +4,8 @@ newInjected = false;
 
 ////MAIN////
 
-console.log("Initializing tabber content manager.");
-//window.localStorage.setItem('tabber-id', chrome.runtime.id);
-console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
-
 var newPayload = function() {
-	console.log("Payload :)");
+	console.log("Running file manager.");
 }
 
 // Prepares the JS injection
@@ -21,7 +17,7 @@ var newInject = function() {
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request.message == "clicked_find_messages" && !newInjected) {
-		console.log("User has clicked Find Messages in the context menu.");
+		console.log("User has clicked 'Find Messages' in the context menu.");
 		newInjected = true;
 		newInject();
 	}
