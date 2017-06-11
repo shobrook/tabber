@@ -12,7 +12,7 @@
       "http://www.messenger.com/*",
       "https://www.messenger.com/*"
     ],
-    "js": ["jquery-3.2.1.min.js", "content_save.js", "content_manager.js"]
+    "js": ["jquery-3.2.1.min.js", "save.js", "manager.js"]
   }],
   "browser_action": {
     "default_icon": "icon.png",
@@ -20,5 +20,8 @@
   },
   "permissions": [
     "contextMenus"
-  ]
+  ],
+  "web_accessible_resources": [
+    "messages.json"
+]
 }
