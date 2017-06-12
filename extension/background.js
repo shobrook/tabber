@@ -23,10 +23,17 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 });
 
 // Listens for selected messages from content script
+// TODO: Write to messages.json?
 chrome.runtime.onConnect.addListener(function(port) {
 	console.assert(port.name == "saved-messages");
-  port.onMessage.addListener(function(msg) {
-		// TODO: Target msg.messages.folder in messages.json and add the message block
+	port.onMessage.addListener(function(msg) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('POST', chrome.runtime.getURL("messages.json"), true);
+		xhr.onload = function () {
+			// do something to response
+			console.log(this.responseText);
+		};
+		xhr.send('something=something');
 		console.log(msg.messages);
   });
 });
