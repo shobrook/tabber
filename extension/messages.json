@@ -1,11 +1,30 @@
 {
-  "Protips": [{
-    "name": "Importance of Stories",
-    "messages": [{
-      "sender": 1,
-      "message": "I also realized that I should really be trying to elicit stories more often. I do it a lot, but lately I've been slowing down. Stories from others give you world knowledge, different perspectives, and lessons to reiterate to others"
-    }]
-  }],
-  "App Ideas": [],
-  "One-liners": []
+  "messages": [
+    {
+      "type": u"folder",
+      "name": u"Protips",
+      "content": [
+        {
+          "type": u"file",
+          "name": u"Importance of Stories",
+          "content": [
+            {
+              "sender": 1,
+              "message": u"Stories from others give you world knowledge, different perspectives, and lessons to reiterate to others"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": u"folder",
+      "name": u"App Ideas",
+      "content": []
+    },
+    {
+      "type": u"folder",
+      "name": u"One-liners",
+      "content": []
+    }
+  ]
 }

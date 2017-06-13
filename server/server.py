@@ -1,58 +1,39 @@
-import json
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, json
+from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
-# TODO: Set up a messages.json file pipeline
-messages = [
-	{
-		"id": 1,
-		"type": u"folder",
-		"name": u"Protips",
-		"content": [
-			{
-				"type": u"file",
-				"name": u"Importance of Stories",
-				"content": [
-					{
-						"sender": 1,
-						"message": u"Stories from others give you world knowledge, different perspectives, and lessons to reiterate to others"
-					}
-				]
-			}
-		]
-	},
-	{
-		"id": 2,
-		"type": u"folder",
-		"name": u"App Ideas",
-		"content": []
-	},
-	{
-		"id": 3,
-		"type": u"folder",
-		"name": u"One-liners",
-		"content": []
-	}
-]
+app.config['MONGO_DBNAME'] = 'tabberdb'
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/tabberdb'
 
-# Default response; return empty string
+mongo = PyMongo(app)
+
+# Default response; return an empty string
 @app.route("/")
 def main():
 	return ""
 
-# Testing only
+# Returns all database contents; for local testing only
 @app.route("/tabber/api/get_messages", methods=["GET"])
 def get_messages():
-	return jsonify({"messages": messages})
+	messages = mongo.db.messages
+	output = []
+	for m in messages.find():
+		output.append(m)
+	return jsonify({"messages": output})
 
+# TODO: Iterate through ALL folders and return top 10 most populated ones
+# Returns a list of root folders
 @app.route("/tabber/api/get_folders", methods=["GET"])
 def get_folders():
-	folders = []
-	for i in messages:
-		if i["type"] == "folder": folders.append(i["name"])
-	return jsonify({"folders": folders})
+	messages = mongo.db.messages
+	output = []
+	for m in messages.find():
+		if m["type"] == "folder": output.append(m["name"])
+	return jsonify({"folders": output})
 
+# TODO: Targets folder given path, appends new file
+# Targets given folder in root, appends new file
 @app.route("/tabber/api/add_message", methods=["POST"])
 def add_message():
 	if not request.json or not "name" in request.json:
@@ -62,10 +43,16 @@ def add_message():
 		"name": request.json["name"],
 		"content": request.json["content"]
 	}
-	for i in messages:
-		if i["type"] == "folder" and i["name"] == request.json["folder"]:
-			i["content"].append(message)
-	return jsonify({"folder": request.json["folder"], "message": message}), 201
+	messages = mongo.db.messages
+	mongo.db.messages.insert(message)
+	#folder = messages.find_one({"type": "folder", "name": request.json["folder"]})
+	#output = {"folder": request.json["folder"], "message": message}
+	#return jsonify({"response": output})
+	#for m in messages.find():
+		#if m["type"] == "folder" and m["name"] == request.json["folder"]:
+	return ""
+
+# TODO: Targets folder given path, appends new folder
 
 if __name__ == "__main__":
 	app.run(debug=True)
