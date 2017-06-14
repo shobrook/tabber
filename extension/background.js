@@ -1,25 +1,35 @@
 ////GLOBALS////
 
-/* Nothin' here yet */
+var getFolders = function(url, callback) {
+	var xhr = new XMLHttpRequest();
+	xhr.open('GET', url, true);
+	xhr.responseType = 'json';
+	xhr.onload = function() {
+		var status = xhr.status;
+		if (status == 200)
+			callback(null, xhr.response);
+		else
+			callback(status);
+	};
+	xhr.send();
+};
 
 ////MAIN////
 
 // Called when a user clicks the browser action
 chrome.browserAction.onClicked.addListener(function(tab) {
-	var xhr = new XMLHttpRequest;
-	xhr.open("GET", chrome.runtime.getURL("messages.json"));
-	xhr.onreadystatechange = function() {
-		if (this.readyState == 4) {
-			var folders = JSON.parse(xhr.responseText);
-			var folderNames = Object.keys(folders);
+	var folderNames = [];
+	getFolders("http://localhost:5000/tabber/api/get_folders", function(err, data) {
+		if (err != null)
+			console.log("Error retrieving folders: " + err);
+		else
+			folderNames = data.folders;
+	});
 
-			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_browser_action", "folders": folderNames});
-			});
-		}
-	};
-	xhr.send();
+	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+		var activeTab = tabs[0];
+		chrome.tabs.sendMessage(activateTab.id, {"message": "clicked_browser_action", "folders": folderNames});
+	});
 });
 
 // Listens for selected messages from content script
