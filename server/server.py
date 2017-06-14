@@ -13,22 +13,27 @@ mongo = PyMongo(app)
 def main():
 	return ""
 
+# Initializes the database with sample folders; for local testing only
+@app.route("/tabber/api/populate", methods=["GET"])
+def initialize():
+	documents = [{"type": u"folder", "name": u"Protips", "content": []}, {"type": u"folder", "name": u"App Ideas", "content": []}, {"type": u"folder", "name": "One-liners", "content": []}]
+	mongo.db.messages.insert(documents)
+	return ""
+
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_messages", methods=["GET"])
 def get_messages():
-	messages = mongo.db.messages
 	output = []
-	for m in messages.find():
-		output.append(m)
+	for m in mongo.db.messages.find():
+		output.append({"type": m["type"], "name": m["name"], "content": m["content"]})
 	return jsonify({"messages": output})
 
 # TODO: Iterate through ALL folders and return top 10 most populated ones
 # Returns a list of root folders
 @app.route("/tabber/api/get_folders", methods=["GET"])
 def get_folders():
-	messages = mongo.db.messages
 	output = []
-	for m in messages.find():
+	for m in mongo.db.messages.find():
 		if m["type"] == "folder": output.append(m["name"])
 	return jsonify({"folders": output})
 
@@ -43,13 +48,10 @@ def add_message():
 		"name": request.json["name"],
 		"content": request.json["content"]
 	}
-	messages = mongo.db.messages
-	mongo.db.messages.insert(message)
-	#folder = messages.find_one({"type": "folder", "name": request.json["folder"]})
-	#output = {"folder": request.json["folder"], "message": message}
-	#return jsonify({"response": output})
-	#for m in messages.find():
-		#if m["type"] == "folder" and m["name"] == request.json["folder"]:
+	output = mongo.db.messages.update_one(
+		{"type": "folder", "name": request.json["folder"]},
+		{"$push": {"content": message}}
+	)
 	return ""
 
 # TODO: Targets folder given path, appends new folder
