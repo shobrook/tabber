@@ -1,3 +1,5 @@
+from bson.errors import InvalidId
+from bson.objectid import ObjectId
 from flask import Flask, jsonify, request, json
 from flask_pymongo import PyMongo
 
@@ -8,79 +10,114 @@ app.config['MONGO_URI'] = 'mongodb://localhost:27017/tabberdb'
 
 mongo = PyMongo(app)
 
-
-
-# DATA MODEL
-# 3 entities: users, folders, and conversations
-# User: {"chromeID": "...", "email": "...", "password": "...", "rootFolder": "..."}
-# Folder: {"name": "...", "subfolders": "...", "conversations": "..."}
-# Conversation: {"name": "...", "messages": [{"author": "...", "content": "..."}, ...]}
-
-
+"""DATA MODEL
+   Collections: users, folders, conversations
+   User: {"chromeID": "...", "email": "...", "password": "...", "root": "..."}
+   Folder: {"name": "...", "children": "...", "conversations": "..."}
+   Conversation: {"name": "...", "messages": [{"author": "...", "content": "..."}, ...]}
+"""
 
 # Default response; return an empty string
 @app.route("/")
 def main():
-	return
+	return ""
 
-# Initializes the database with sample folders; for local testing only
-@app.route("/tabber/api/initialize", methods=["POST"])
-def initialize():
-	user = {"chromeID": "", "email": "example@example.com", "password": "example_pass", "rootFolder": ""}
-	mongo.db.users.insert(user)
-	rootFolder = {"name": "example root folder", "subfolders": [], "conversations": []}
-	mongodb.folders.insert(rootFolder)
-	return "success"
-
-# Returns all database contents; for local testing only
-@app.route("/tabber/api/get_messages", methods=["GET"])
-def get_messages():
-	output = []
-	for c in mongo.db.conversations.find():
-		output.append({"name": c["name"], "messages": [c["messages"]]})
-	return jsonify({"conversations": output})
-
-# TODO: Iterate through ALL folders and return top 10 most populated ones
-# Returns a list of root folders
-@app.route("/tabber/api/get_folders", methods=["GET"])
-def get_folders():
-	output = []
-	for f in mongo.db.folders.find():
-		output.append(f["name"])
-	return jsonify({"folders": output})
-
-# TODO: Targets folder given path, appends new file
-# Targets given folder in root, appends new file
-@app.route("/tabber/api/add_message", methods=["POST"])
-def add_conversation():
-	# TODO: Check this
-	if not request.json or not "name" in request.json:
+# Initializes a new user's documents
+@app.route("/tabber/api/populate", methods=["POST"])
+def populate():
+	# Request: {"chromeID": "...", "email": "...", "password": "..."}
+	if not request.json or not "chromeID" in request.json:
 		abort(400)
+
+	root_id = mongo.db.folders.insert({
+		"name": "root",
+		"children": [],
+		"conversations": []
+	})
+	user_id = mongo.db.users.insert({
+		"chromeID": request.json["chromeID"],
+		"email": request.json["email"],
+		"password": request.json["password"],
+		"root": root_id
+	})
+	mongo.db.folders.update_one({
+		"_id": root_id},
+		{"$set": {"user_id": ObjectId(str(user_id))}
+	}, upsert=False)
+
+	return jsonify({"user_id": str(user_id)})
+
+# Creates new conversation in specified folder; TODO: Fix this
+@app.route("/tabber/api/add_conversation", methods=["POST"])
+def add_conversation():
+	# Request: {"id": "...", "name": "...", "folder": "...", "messages": [{"author": "...", "content": "..."}, ...]}
+	if not request.json or not "id" in request.json:
+		abort(400)
+	folder = mongo.db.folders.find_one({"name": request.json["folder"], "user_id": ObjectId(request.json["id"])})
 	convo = {
 		"name": request.json["name"],
-		"messages": request.json["messages"]
+		"messages": request.json["messages"],
+		"folder": folder["_id"]
 	}
-	# TODO: Change this
-	output = mongo.db.messages.update_one(
-		{"type": "folder", "name": request.json["folder"]},
-		{"$push": {"content": message}}
-	)
-	return "success"
+	convo_id = mongo.db.conversations.insert(convo)
+	mongo.db.folders.update_one({
+		"_id": folder["_id"]},
+		{"$push": {"conversations": ObjectId(str(convo_id))}
+	}, True)
+	return jsonify({"convo_id": str(convo_id)})
 
-# TODO: Targets folder given path, appends new folder
-# TODO: Targets folder given path, appends new file
-# Targets given folder in root, appends new file
+# Creates new folder given a parent directory
 @app.route("/tabber/api/add_folder", methods=["POST"])
-def add_conversation():
-	# TODO: Check this
-	if not request.json or not "name" in request.json:
+def add_folder():
+	# Request: {"id": "...", "parent": "...", "name": "..."}
+	if not request.json or not "id" in request.json:
 		abort(400)
-	folder = {
-		"name": request.json["name"]
-	}
-	return "success"
 
+	folder = mongo.db.folders.insert({
+		"name": request.json["name"],
+		"children": [],
+		"conversations": [],
+		"user_id": ObjectId(str(request.json["id"]))
+	})
+	parentFolder = mongo.db.folders.update_one({
+		"name": request.json["parent"],
+		"user_id": request.json["id"]},
+		{"$push": {"children": ObjectId(str(folder))}
+	}, True)
 
+	return jsonify({"folder_id": str(folder)})
+
+# Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
+@app.route("/tabber/api/get_folders", methods=["POST"])
+def get_folders():
+	# Request: {"id": "..."}
+	if not request.json or not "id" in request.json:
+		abort(400)
+
+	output = []
+	for f in mongo.db.folders.find():
+		if f["user_id"] == ObjectId(str(request.json["id"])):
+			output.append(f["name"])
+
+	return jsonify({"folders": output})
+
+# Returns all database contents; for local testing only
+@app.route("/tabber/api/get_database", methods=["GET"])
+def get_database():
+	users = []
+	folders = []
+	conversations = []
+
+	for u in mongo.db.users.find():
+		users.append({"_id": str(u["_id"]), "chromeID": u["chromeID"], "email": u["email"], "password": u["password"], "root": str(u["root"])})
+	for f in mongo.db.folders.find():
+		folders.append({"_id": str(f["_id"]), "user_id": str(f["user_id"]), "name": f["name"], "children": f["children"]})
+	for c in mongo.db.conversations.find():
+		conversations.append({"_id": str(c["_id"]), "name": c["name"], "messages": c["messages"]})
+
+	return jsonify({"users": users, "folders": folders, "conversations": conversations})
+
+# TODO: Add endpoints for renaming folders and conversations
 
 if __name__ == "__main__":
 	app.run(debug=True)
