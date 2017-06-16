@@ -19,7 +19,8 @@
     "default_title": "tabber"
   },
   "permissions": [
-    "contextMenus"
+    "contextMenus",
+    "http://localhost:5000/*"
   ],
   "web_accessible_resources": []
 }
