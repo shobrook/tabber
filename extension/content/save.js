@@ -1,8 +1,8 @@
-////GLOBALS////
+// GLOBALS
 
 injected = false;
 
-////MAIN////
+// MAIN
 
 console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);

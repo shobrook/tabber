@@ -10,7 +10,8 @@ app.config['MONGO_URI'] = 'mongodb://localhost:27017/tabberdb'
 
 mongo = PyMongo(app)
 
-"""DATA MODEL
+"""
+DATA MODEL
    Collections: users, folders, conversations
    User: {"chromeID": "...", "email": "...", "password": "...", "root": "..."}
    Folder: {"name": "...", "children": "...", "conversations": "..."}

@@ -1,4 +1,4 @@
-////GLOBALS////
+// GLOBALS
 
 var getFolders = function(url, callback) {
 	var xhr = new XMLHttpRequest();
@@ -14,7 +14,7 @@ var getFolders = function(url, callback) {
 	xhr.send();
 };
 
-////MAIN////
+// MAIN
 
 // Called when a user clicks the browser action
 chrome.browserAction.onClicked.addListener(function(tab) {
@@ -28,7 +28,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var activeTab = tabs[0];
-		chrome.tabs.sendMessage(activateTab.id, {"message": "clicked_browser_action", "folders": folderNames});
+		chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_browser_action", "folders": folderNames});
 	});
 });
 
