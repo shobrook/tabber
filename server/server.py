@@ -99,7 +99,9 @@ def add_folder():
 
 	return jsonify({"folder_id": str(folder)})
 
-# Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
+# Returns user's folder names
+# TODO: Return top 10 most populated (or popular?) folders
+# TODO: Change this to access parameters, not request.json
 @app.route("/tabber/api/get_folders", methods=["GET"])
 def get_folders():
 	# Request: {"id": "..."}

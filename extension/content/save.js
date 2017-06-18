@@ -165,7 +165,7 @@ var payload = function() {
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
-				var form_defs = `<form id="saveForm">
+				var formDefs = `<form id="saveForm">
 									<label for="name"> Name: </label>
 									<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
 									<label for="folder"> Folder: </label>
@@ -195,7 +195,7 @@ var payload = function() {
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
 
-				saveDialog.innerHTML = messagePreview + form_defs;
+				saveDialog.innerHTML = messagePreview + formDefs;
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
