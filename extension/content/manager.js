@@ -11,7 +11,7 @@ var newPayload = function() {
 		console.log(folder);
 		var folderListHTML = "<ul style='padding-left:15px;'>";
 		for (var i = 0; i < folder["children"].length; i++) {
-			folderListHTML += "<li style='color: #7B7F84; margin: 0;'> " + folder["children"][i]["name"] + " </li>";
+			folderListHTML += "<li class='tabberFolder' style='color: #7B7F84; margin: 0;'> " + folder["children"][i]["name"] + " </li>";
 			if (folder["children"][i]["children"].length > 0) {
 				console.log(folder["children"][i]["children"].length + " children found in folder: " + folder["children"][i]["name"]);
 				folderListHTML += getFolderTreeViewRecursive(folder["children"][i]);
@@ -22,7 +22,7 @@ var newPayload = function() {
 
 	var getFolderTreeView = function(folderList) {
 		console.log(folderList);
-		var folderListHTML = "<ul><li style='color: #7B7F84; margin: 0;'> " + folderList["folders"][0]["name"] + " </li>";
+		var folderListHTML = "<ul><li class='tabberFolder' style='color: #7B7F84; margin: 0;'> " + folderList["folders"][0]["name"] + " </li>";
 		if (folderList["folders"][0]["children"].length > 0) {
 			console.log(folderList["folders"][0]["children"].length + " children found in folder: " + folderList["folders"][0]["name"]);
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]);
@@ -73,6 +73,18 @@ var newPayload = function() {
 
 	document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 	document.body.appendChild(fileManager); // Prompts the "save" dialog
+
+	var tabberFolders = document.getElementsByClassName("tabberFolder");
+	for (var i = 0; i < tabberFolders.length; i++) {
+		if (tabberFolders[i].nextSibling && tabberFolders[i].nextSibling.tagName.toLowerCase() == "ul") {
+			tabberFolders[i].addEventListener("click", function() {
+				if (this.nextSibling.style.display == "none") {
+					this.nextSibling.style.display = "";
+				}
+				else this.nextSibling.style.display = "none";
+			}, false);
+		}
+	}
 
 	var cancelForm = document.getElementById("cancelButton");
 
