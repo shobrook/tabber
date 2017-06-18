@@ -148,7 +148,6 @@ var payload = function() {
 					}
 				}
 			});
-
 			callback(selectedMessages);
 		}
 	}
@@ -168,14 +167,12 @@ var payload = function() {
 				var saveDialog = document.createElement("div");
 				var form_defs = `<form id="saveForm">
 									<label for="name"> Name: </label>
-				    			<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
-
-				    			<label for="folder"> Folder: </label>
-				    			<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">` + folderHTML +
-
+									<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
+									<label for="folder"> Folder: </label>
+									<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">` + folderHTML +
 									`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
-				    			<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
-				  			</form>`;
+									<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
+								</form>`;
 
 				canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 

@@ -10,6 +10,10 @@ var newPayload = function() {
 	var canvas = document.createElement('div');
 	var fileManager = document.createElement("div");
 
+	var form_defs = `<form id="cancelForm">
+						<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
+					</form>`;
+
 	canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 
 	fileManager.style.position = "fixed";
@@ -22,8 +26,17 @@ var newPayload = function() {
 	fileManager.style.backgroundColor = "#FFFFFF";
 	fileManager.style.zIndex = "2147483647";
 
+	fileManager.innerHTML = form_defs;
+
 	document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 	document.body.appendChild(fileManager); // Prompts the "save" dialog
+
+	var cancelForm = document.getElementById("cancelButton");
+
+	cancelForm.onclick = function() {
+		document.body.removeChild(fileManager);
+		document.body.removeChild(canvas);
+	}
 
 	console.log("Displayed file manager.");
 }
