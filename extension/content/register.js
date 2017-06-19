@@ -1,20 +1,21 @@
-// GLOBALS
+// TODO: Stylize the sign-up and login dialogs
 
-var signUpPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "signup"});
+/* GLOBALS */
+
+var registerPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "register"});
 var loginPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "login"});
-signUpInjected = false;
 
-// MAIN
+injectedRegisterDialog = false;
 
-var loginPayload = function() {
+/* MAIN */
 
+var registerPayload = function() {
 	console.log("Prompting sign-up dialog.");
 
 	var canvas = document.createElement('div');
 	var signUpDialog = document.createElement("div");
 
-	var form_defs = `<h1 id="heading"> Sign up to get started. </h1>
-						<form id="signUpForm">
+	var form_defs = `<form id="signUpForm">
 							<label for="usr"> Email: </label>
 							<input type="text" name="usr" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;"">
 							<label for="pword"> Password: </label>
@@ -41,10 +42,12 @@ var loginPayload = function() {
 	document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 	document.body.appendChild(signUpDialog); // Prompts the "sign up" dialog
 
-	var signUpForm = document.getElementById("signUpForm");
-	signUpForm.onsubmit = function() {
-		var email = document.getElementById("signUpForm").usr.value;
-		var password = document.getElementById("signUpForm").pword.value;
+	var signUp = document.getElementById("signUpForm");
+	var login = document.getElementById("loginLink");
+
+	signUp.onsubmit = function() {
+		var email = (this).usr.value;
+		var password = (this).pword.value;
 
 		window.postMessage({type: "signup_credentials", text: {"email": email, "password": password}}, '*');
 
@@ -54,10 +57,9 @@ var loginPayload = function() {
 		document.body.removeChild(canvas);
 	}
 
-	var loginLink = document.getElementById("loginLink");
-	loginLink.onclick = function() {
-		var email = document.getElementById("signUpForm").usr.value;
-		var password = document.getElementById("signUpForm").pword.value;
+	login.onclick = function() {
+		var email = signUp.usr.value;
+		var password = signUp.pword.value;
 
 		window.postMessage({type: "login_credentials", text: {"email": email, "password": password}}, '*');
 
@@ -71,9 +73,9 @@ var loginPayload = function() {
 }
 
 // Prepares the JS injection
-var signUpInject = function() {
+var registerInject = function() {
 	var script = document.createElement('script');
-	script.textContent = "(" + loginPayload.toString() + ")();";
+	script.textContent = "(" + registerPayload.toString() + ")();";
 	document.head.appendChild(script);
 }
 
@@ -81,14 +83,14 @@ var signUpInject = function() {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request.message == "first_install") {
 		console.log("User has installed tabber for the first time.");
-		signUpInject();
+		registerInject();
 	}
 });
 
 // Passes login or signup credentials to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "signup_credentials")
-		signUpPort.postMessage({email: event.data.text.email, password: event.data.text.password});
+		registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
 	else if (event.data.type && event.data.type == "login_credentials")
 		loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
-})
+});
