@@ -247,6 +247,6 @@ var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {nam
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
 		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
-		port.postMessage({messages: {name: event.data.text.name, folder: event.data.text.folder, content: event.data.text.messages}});
+		port.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
 	}
 });
