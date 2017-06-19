@@ -1,11 +1,10 @@
+####GLOBALS####
+
+
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
-
-
-####GLOBALS####
-
 
 DEBUG = True
 
@@ -18,9 +17,9 @@ mongo = PyMongo(app)
 
 """ DATA MODEL
 	Collections: users, folders, conversations
-	User: {"chromeID": "...", "email": "...", "password": "...", "root": "..."}
-	Folder: {"name": "...", "children": "...", "conversations": "..."}
-	Conversation: {"name": "...", "messages": [{"author": "...", "content": "..."}, ...]}
+	User: {"_id": ObjectId("..."), "authToken": ["...", ...], "email": "...", "password": "...", "root": ObjectId("...")}
+	Folder: {"_id": ObjectId("..."), "name": "...", "children": "...", "conversations": [ObjectId("..."), ...], "user_id": ObjectId("...")}
+	Conversation: {"_id": ObjectId("..."), "name": "...", "messages": [{"author": "...", "content": ["...", ...]}, ...]}
 """
 
 
@@ -32,10 +31,10 @@ mongo = PyMongo(app)
 def main():
 	return 404
 
-# Initializes a new user's documents
+# Initializes and populates a new user's documents
 @app.route("/tabber/api/new_user", methods=["POST"])
 def new_user():
-	# Request: {"authToken": ["..."], "email": "...", "password": "..."}
+	# Request: {"authToken": "...", "email": "...", "password": "..."}
 	if not request.json or not "authToken" in request.json:
 		abort(400, "new_user(): request.json does not exist or does not contain 'authToken'")
 
@@ -45,7 +44,7 @@ def new_user():
 		"conversations": []
 	})
 	user_id = mongo.db.users.insert({
-		"authToken": request.json["authToken"],
+		"authToken": [request.json["authToken"]],
 		"email": request.json["email"],
 		"password": request.json["password"],
 		"root": root_id
@@ -64,13 +63,20 @@ def update_user():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "update_user(): request.json does not exist or does not contain 'authToken'")
 
-	user = mongo.db.users.find_one({"email": request.json["email"], "password": request.json["password"]})
+	user = mongo.db.users.find_one({
+		"email": request.json["email"],
+		"password": request.json["password"]
+	})
 	if request.json["authToken"] in user["authToken"]:
-		return False
+		return jsonify({"updated": False})
 	else:
-		mongo.db.users.update_one({"email": request.json["email"], "password": request.json["password"]}, {"$push": {"authToken": request.json["authToken"]}}, True)
+		mongo.db.users.update_one({
+			"email": request.json["email"],
+			"password": request.json["password"]},
+			{"$push": {"authToken": request.json["authToken"]}
+		}, True)
 
-	return True
+	return jsonify({"updated": True})
 
 # Checks if a given email or email/password combo is already registered
 @app.route("/tabber/api/validate_user", methods=["POST"])
@@ -79,17 +85,16 @@ def validate_user():
 	if not request.json or not "email" in request.json:
 		return abort(400, "validate_user(): request.json does not exist or does not contain 'email'")
 
-	check = False
 	if not "password" in request.json:
 		for u in mongo.db.users.find():
 			if u["email"] == request.json["email"]:
-				check = True
-	else:
-		for u in mongo.db.users.find():
-			if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
-				check = True
+				return jsonify({"valid": False})
+		return jsonify({"valid": True})
 
-	return check
+	for u in mongo.db.users.find():
+		if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
+			return jsonify({"valid": True})
+	return jsonify({"valid": False})
 
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])
@@ -116,8 +121,8 @@ def add_conversation():
 @app.route("/tabber/api/add_folder", methods=["POST"])
 def add_folder():
 	# Request: {"authToken": "...", "parent": "...", "name": "..."}
-	if not request.json or not "id" in request.json:
-		abort(400, "add_folder(): request.json does not exist or does not contain 'id'")
+	if not request.json or not "authToken" in request.json:
+		abort(400, "add_folder(): request.json does not exist or does not contain 'authToken'")
 
 	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
 	folder = mongo.db.folders.insert({
@@ -138,8 +143,8 @@ def add_folder():
 @app.route("/tabber/api/get_folders", methods=["POST"])
 def get_folders():
 	# Request: {"authToken": "..."}
-	if not request.json or not "id" in request.json:
-		abort(400, "get_folders(): request.json does not exist or does not contain 'id'")
+	if not request.json or not "authToken" in request.json:
+		abort(400, "get_folders(): request.json does not exist or does not contain 'authToken'")
 
 	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
 	output = []
@@ -157,11 +162,27 @@ def get_database():
 	conversations = []
 
 	for u in mongo.db.users.find():
-		users.append({"_id": str(u["_id"]), "chromeID": u["chromeID"], "email": u["email"], "password": u["password"], "root": str(u["root"])})
+		users.append({
+			"_id": str(u["_id"]),
+			"authToken": u["authToken"],
+			"email": u["email"],
+			"password": u["password"],
+			"root": str(u["root"])
+		})
 	for f in mongo.db.folders.find():
-		folders.append({"_id": str(f["_id"]), "user_id": str(f["user_id"]), "name": f["name"], "children": f["children"]})
+		folders.append({
+			"_id": str(f["_id"]),
+			"user_id": str(f["user_id"]),
+			"name": f["name"],
+			"children": f["children"],
+			"conversations": f["conversations"]
+		})
 	for c in mongo.db.conversations.find():
-		conversations.append({"_id": str(c["_id"]), "name": c["name"], "messages": c["messages"]})
+		conversations.append({
+			"_id": str(c["_id"]),
+			"name": c["name"],
+			"messages": c["messages"]
+		})
 
 	return jsonify({"users": users, "folders": folders, "conversations": conversations})
 
