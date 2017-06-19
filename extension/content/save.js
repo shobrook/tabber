@@ -1,6 +1,6 @@
 // GLOBALS
 
-injected = false;
+injectedSaveMessages = false;
 
 // MAIN
 
@@ -8,7 +8,8 @@ console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
-var payload = function() {
+var saveMessages = function() {
+	// NOTE: This is placed outside messages so that it immediately scrapes the messages while the rest of the JS is being injected
 	var scrapeAllMessages = function() {
 		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
 
@@ -165,7 +166,7 @@ var payload = function() {
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
-				var form_defs = `<form id="saveForm">
+				var formDefs = `<form id="saveForm">
 									<label for="name"> Name: </label>
 									<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
 									<label for="folder"> Folder: </label>
@@ -195,7 +196,7 @@ var payload = function() {
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
 
-				saveDialog.innerHTML = messagePreview + form_defs;
+				saveDialog.innerHTML = messagePreview + formDefs;
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
@@ -226,17 +227,17 @@ var payload = function() {
 }
 
 // Prepares the JS injection
-var inject = function() {
+var injectSaveMessages = function() {
 	var script = document.createElement('script');
-	script.textContent = "(" + payload.toString() + ")();";
+	script.textContent = "(" + saveMessages.toString() + ")();";
 	document.head.appendChild(script);
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.message == "clicked_browser_action" && !injected) {
+	if (request.message == "clicked_browser_action" && !injectedSaveMessages) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
-		injected = true;
-		inject();
+		injectedSaveMessages = true;
+		injectSaveMessages();
 	}
 	if (request.message == "clicked_browser_action")
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
