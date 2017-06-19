@@ -1,6 +1,6 @@
 // GLOBALS
 
-injected = false;
+injectedSaveMessages = false;
 
 // MAIN
 
@@ -8,7 +8,8 @@ console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
-var payload = function() {
+var saveMessages = function() {
+	// NOTE: This is placed outside messages so that it immediately scrapes the messages while the rest of the JS is being injected
 	var scrapeAllMessages = function() {
 		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
 
@@ -226,17 +227,17 @@ var payload = function() {
 }
 
 // Prepares the JS injection
-var inject = function() {
+var injectSaveMessages = function() {
 	var script = document.createElement('script');
-	script.textContent = "(" + payload.toString() + ")();";
+	script.textContent = "(" + saveMessages.toString() + ")();";
 	document.head.appendChild(script);
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.message == "clicked_browser_action" && !injected) {
+	if (request.message == "clicked_browser_action" && !injectedSaveMessages) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
-		injected = true;
-		inject();
+		injectedSaveMessages = true;
+		injectSaveMessages();
 	}
 	if (request.message == "clicked_browser_action")
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
