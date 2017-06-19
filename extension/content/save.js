@@ -1,8 +1,11 @@
-// GLOBALS
+// TODO: Stylize the save dialog
 
+/* GLOBALS */
+
+var messagePort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
 injectedSaveMessages = false;
 
-// MAIN
+/* MAIN */
 
 console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
@@ -243,11 +246,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
-// Opens long-lived connection b/w content and background
-var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
+// Passes conversation payload to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
 		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
-		port.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
+		messagePort.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
 	}
 });
