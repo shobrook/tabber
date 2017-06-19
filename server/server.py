@@ -4,8 +4,8 @@ from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 
 
+####GLOBALS####
 
-# GLOBALS
 
 DEBUG = True
 
@@ -16,8 +16,7 @@ app.config['MONGO_URI'] = 'mongodb://localhost:27017/tabberdb'
 
 mongo = PyMongo(app)
 
-"""
-DATA MODEL
+""" DATA MODEL
 	Collections: users, folders, conversations
 	User: {"chromeID": "...", "email": "...", "password": "...", "root": "..."}
 	Folder: {"name": "...", "children": "...", "conversations": "..."}
@@ -25,8 +24,8 @@ DATA MODEL
 """
 
 
+####ROUTING####
 
-# ROUTING
 
 # Default response; return an empty string
 @app.route("/")
@@ -34,11 +33,11 @@ def main():
 	return 404
 
 # Initializes a new user's documents
-@app.route("/tabber/api/populate", methods=["POST"])
-def populate():
-	# Request: {"chromeID": "...", "email": "...", "password": "..."}
-	if not request.json or not "chromeID" in request.json:
-		abort(400, "populate(): request.json does not exist or does not contain 'id'")
+@app.route("/tabber/api/new_user", methods=["POST"])
+def new_user():
+	# Request: {"authToken": ["..."], "email": "...", "password": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "new_user(): request.json does not exist or does not contain 'authToken'")
 
 	root_id = mongo.db.folders.insert({
 		"name": "root",
@@ -46,7 +45,7 @@ def populate():
 		"conversations": []
 	})
 	user_id = mongo.db.users.insert({
-		"chromeID": request.json["chromeID"],
+		"authToken": request.json["authToken"],
 		"email": request.json["email"],
 		"password": request.json["password"],
 		"root": root_id
@@ -58,14 +57,49 @@ def populate():
 
 	return jsonify({"user_id": str(user_id)})
 
+# Updates a user's authToken list with new device
+@app.route("/tabber/api/update_user", methods=["POST"])
+def update_user():
+	# Request: {"authToken": "...", "email": "...", "password": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "update_user(): request.json does not exist or does not contain 'authToken'")
+
+	user = mongo.db.users.find_one({"email": request.json["email"], "password": request.json["password"]})
+	if request.json["authToken"] in user["authToken"]:
+		return False
+	else:
+		mongo.db.users.update_one({"email": request.json["email"], "password": request.json["password"]}, {"$push": {"authToken": request.json["authToken"]}}, True)
+
+	return True
+
+# Checks if a given email or email/password combo is already registered
+@app.route("/tabber/api/validate_user", methods=["POST"])
+def validate_user():
+	# Request: {"email": "..."} OR {"email": "...", "password": "..."}
+	if not request.json or not "email" in request.json:
+		return abort(400, "validate_user(): request.json does not exist or does not contain 'email'")
+
+	check = False
+	if not "password" in request.json:
+		for u in mongo.db.users.find():
+			if u["email"] == request.json["email"]:
+				check = True
+	else:
+		for u in mongo.db.users.find():
+			if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
+				check = True
+
+	return check
+
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])
 def add_conversation():
-	# Request: {"id": "...", "name": "...", "folder": "...", "messages": [{"author": "...", "content": "..."}, ...]}
-	if not request.json or not "id" in request.json:
-		return abort(400, "add_conversation(): request.json does not exist or does not contain 'id'")
+	# Request: {"authToken": "...", "name": "...", "folder": "...", "messages": [{"author": "...", "content": "..."}, ...]}
+	if not request.json or not "authToken" in request.json:
+		return abort(400, "add_conversation(): request.json does not exist or does not contain 'authToken'")
 
-	folder = mongo.db.folders.find_one({"name": request.json["folder"], "user_id": ObjectId(request.json["id"])})
+	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
+	folder = mongo.db.folders.find_one({"name": request.json["folder"], "user_id": ObjectId(str(user["_id"]))})
 	convo = {
 		"name": request.json["name"],
 		"messages": request.json["messages"],
@@ -81,34 +115,36 @@ def add_conversation():
 # Creates new folder given a parent directory
 @app.route("/tabber/api/add_folder", methods=["POST"])
 def add_folder():
-	# Request: {"id": "...", "parent": "...", "name": "..."}
+	# Request: {"authToken": "...", "parent": "...", "name": "..."}
 	if not request.json or not "id" in request.json:
 		abort(400, "add_folder(): request.json does not exist or does not contain 'id'")
 
+	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
 	folder = mongo.db.folders.insert({
 		"name": request.json["name"],
 		"children": [],
 		"conversations": [],
-		"user_id": ObjectId(str(request.json["id"]))
+		"user_id": ObjectId(str(user["_id"]))
 	})
 	parentFolder = mongo.db.folders.update_one({
 		"name": request.json["parent"],
-		"user_id": request.json["id"]},
+		"user_id": ObjectId(str(user["_id"]))},
 		{"$push": {"children": ObjectId(str(folder))}
 	}, True)
 
 	return jsonify({"folder_id": str(folder)})
 
 # Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
-@app.route("/tabber/api/get_folders", methods=["GET"])
+@app.route("/tabber/api/get_folders", methods=["POST"])
 def get_folders():
-	# Request: {"id": "..."}
+	# Request: {"authToken": "..."}
 	if not request.json or not "id" in request.json:
 		abort(400, "get_folders(): request.json does not exist or does not contain 'id'")
 
+	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
 	output = []
 	for f in mongo.db.folders.find():
-		if f["user_id"] == ObjectId(str(request.json["id"])):
+		if f["user_id"] == ObjectId(str(user["_id"])):
 			output.append(f["name"])
 
 	return jsonify({"folders": output})
@@ -132,14 +168,14 @@ def get_database():
 # TODO: Add endpoints for renaming folders and conversations
 
 
+####ERROR HANDLING####
 
-# ERROR HANDLING
 
 def error_print(status_code, error):
 	if DEBUG:
-		print "------------"
-		print "ERROR (" + str(status_code) + "): " + error
-		print "------------"
+		print("------------")
+		print("ERROR (" + str(status_code) + "): " + error)
+		print("------------")
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -150,9 +186,6 @@ def bad_request(error):
 def internal_error(error):
 	error_print(500, error.description)
 	return "Internal Error", 500
-
-
-
 
 if __name__ == "__main__":
 	app.run(debug=True)
