@@ -1,8 +1,10 @@
-// GLOBALS
+// TODO: Stylize the file manager
+
+/* GLOBALS */
 
 injectedFileManager = false;
 
-// MAIN
+/* MAIN */
 
 var fileManager = function() {
 	var openFileManager = function() {
