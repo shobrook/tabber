@@ -16,6 +16,7 @@ const UPDATE_USER = "http://localhost:5000/tabber/api/update_user";
 const VALIDATE_USER = "http://localhost:5000/tabber/api/validate_user";
 const ADD_CONVERSATION = "http://localhost:5000/tabber/api/add_conversation";
 const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
+const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -49,6 +50,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
 });
 
 // Passes user's folder references to save.js and prompts "select messages" dialog on click of browser action
+// NOTE: Toggle the two sections to assign browser action click to either login or message selection
 chrome.browserAction.onClicked.addListener(function(tab) {
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var saveDialog = function(folders) {
@@ -58,6 +60,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		}
 		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
+	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+	// 	var activeTab = tabs[0];
+	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+	// });
 });
 
 // Creates "Find Messages" in context menu and prompts file manager
@@ -115,6 +121,19 @@ chrome.runtime.onConnect.addListener(function(port) {
 				// TODO: Send success confirmation back to save.js
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
+		}
+		else if (port.name == "get-conversations") {
+			// var sendFolders = function(folderList) {
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var fileManager = function(folderList) {
+						var activeTab = tabs[0];
+						chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
+						console.log("Passed folder references to file manager.");
+					}
+					POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
+				});
+			// }
+			// POST(GET_CONVERSATIONS, {"authToken": oauth}, sendFolders);
 		}
 	});
 });

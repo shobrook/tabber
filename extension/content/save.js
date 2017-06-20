@@ -14,7 +14,7 @@ console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 var saveMessages = function() {
 	// NOTE: This is placed outside messages so that it immediately scrapes the messages while the rest of the JS is being injected
 	var scrapeAllMessages = function() {
-		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
+		var scrapedMessages = []; // All loaded messages and their respective author + coordinates, in chronological order
 
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
@@ -29,13 +29,13 @@ var saveMessages = function() {
 							if (msgNode == undefined || msgNode == null) continue; // Detects if message is rich media content
 
 							var messageContents = msgNode.textContent;
-							var sender = 0; // 0 for sent, 1 for received
+							var author = 0; // 0 for sent, 1 for received
 							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)") {
-								sender = 1;
+								author = 1;
 							}
 							var position = msgNode.getBoundingClientRect();
 
-							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
+							scrapedMessages.push({"author": author, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
 				});
@@ -48,7 +48,7 @@ var saveMessages = function() {
 
 	var selectMessages = function(callback) {
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
-		var messages = []; // All loaded messages including sender and coordinates
+		var messages = []; // All loaded messages including author and coordinates
 		var tabber_svg, tabber_mask, tabber_clip; // Masking animation shared variables
 
 		var initSVG = function() {
@@ -124,7 +124,7 @@ var saveMessages = function() {
 		initSVG();
 
 		messages = scrapeAllMessages();
-		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
+		var selectedMessages = []; // Selected messages distinguished by author (ordered chronologically)
 
 		// Filters messages through region bounds and append to selectedMessages
 		var filterMessages = function() {
@@ -133,22 +133,22 @@ var saveMessages = function() {
 				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
 						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] < region.final[0] && region.initial[1] > region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
 						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] > region.final[0] && region.initial[1] > region.final[1]) {
 					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
 						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] > region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
 						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				}
 			});
@@ -194,7 +194,7 @@ var saveMessages = function() {
 				// HTML generator for selected messages preview
 				var messagePreview = "";
 				selectedMessages.forEach(function(m) {
-					if (m.sender == 1) messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.message + " </p>";
+					if (m.author == 1) messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.message + " </p>";
 					else messagePreview += "<p style='color: #2C9ED4; margin: 0;'> " + m.message + " </p>";
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
@@ -236,7 +236,7 @@ var injectSaveMessages = function() {
 	document.head.appendChild(script);
 }
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 	if (request.message == "clicked_browser_action" && !injectedSaveMessages) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
 		injectedSaveMessages = true;

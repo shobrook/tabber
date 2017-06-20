@@ -6,6 +6,8 @@ from bson.objectid import ObjectId
 from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 
+import utilities
+
 DEBUG = True
 
 app = Flask(__name__)
@@ -124,20 +126,7 @@ def add_folder():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "add_folder(): request.json does not exist or does not contain 'authToken'")
 
-	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
-	folder = mongo.db.folders.insert({
-		"name": request.json["name"],
-		"children": [],
-		"conversations": [],
-		"user_id": ObjectId(str(user["_id"]))
-	})
-	parentFolder = mongo.db.folders.update_one({
-		"name": request.json["parent"],
-		"user_id": ObjectId(str(user["_id"]))},
-		{"$push": {"children": ObjectId(str(folder))}
-	}, True)
-
-	return jsonify({"folder_id": str(folder)})
+	return jsonify({"folder_id": str(utilities.add_folder(mongo, request.json))})
 
 # Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
 @app.route("/tabber/api/get_folders", methods=["POST"])
@@ -153,6 +142,15 @@ def get_folders():
 			output.append(f["name"])
 
 	return jsonify({"folders": output})
+
+# Returns all of a user's conversations in a nester structure of folders
+@app.route("/tabber/api/get_conversations", methods=["POST"])
+def get_conversations():
+	# Request: {"authToken": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "get_conversations(): request.json does not exist or does not contain 'authToken'")
+
+	return jsonify({"folders": utilities.get_all_content(mongo, request.json)})
 
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
