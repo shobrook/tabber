@@ -14,10 +14,6 @@ var fileManager = function() {
 		var getFolderTreeViewRecursive = function(folder) {
 			var folderListHTML = "<ul style='padding-left: 15px;'>";
 			// NOTE: Switch the order of these loops to change whether conversations or subfolders come first
-			for (var i = 0; i < folder["children"].length; i++) {
-				folderListHTML += "<li class='tabberFolder' style='color: #7B7F84; margin: 0;'>" + folder["children"][i]["name"] + "</li>";
-				folderListHTML += getFolderTreeViewRecursive(folder["children"][i]);
-			}
 			for (var i = 0; i < folder["conversations"].length; i++) {
 				folderListHTML += "<li class='tabberConversation' style='color: #2C9ED4; margin: 0;'>" + folder["conversations"][i]["name"] + "</li>";
 				// Adds conversation messages as hidden list elements under the conversation name
@@ -28,6 +24,10 @@ var fileManager = function() {
 					}
 					folderListHTML += "</ul>"
 				}
+			}
+			for (var i = 0; i < folder["children"].length; i++) {
+				folderListHTML += "<li class='tabberFolder' style='color: #7B7F84; margin: 0;'>" + folder["children"][i]["name"] + "</li>";
+				folderListHTML += getFolderTreeViewRecursive(folder["children"][i]);
 			}
 			return folderListHTML + "</ul>";
 		}
@@ -40,6 +40,7 @@ var fileManager = function() {
 
 
 		// Example nested structure: Use for testing
+		// TODO: Change "folders" to be the root folder instead of a list of folders
 
 		// {"folders": [{"_id": "...", "conversations": [...], "name": "...", "children": [...], "user_id": "..."}]}
 		// var folderList = {"folders": [

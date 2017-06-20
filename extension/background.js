@@ -50,6 +50,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
 });
 
 // Passes user's folder references to save.js and prompts "select messages" dialog on click of browser action
+// NOTE: Toggle the two sections to assign browser action click to either login or message selection
 chrome.browserAction.onClicked.addListener(function(tab) {
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var saveDialog = function(folders) {
