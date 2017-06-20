@@ -148,12 +148,23 @@ def get_folders():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "get_folders(): request.json does not exist or does not contain 'authToken'")
 
-	print(request.json["authToken"])
 	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
-	print(user)
-	content = utilities.get_all_content(mongo, user)
+	output = []
+	for f in mongo.db.folders.find():
+		if f["user_id"] == ObjectId(str(user["_id"])):
+			output.append(f["name"])
 
-	return jsonify({"folders": content})
+	return jsonify({"folders": output})
+
+# Returns all of a user's conversations in a nester structure of folders
+@app.route("/tabber/api/get_conversations", methods=["POST"])
+def get_conversations():
+	# Request: {"authToken": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "get_conversations(): request.json does not exist or does not contain 'authToken'")
+
+	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
+	return jsonify({"folders": utilities.get_all_content(mongo, user)})
 
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])

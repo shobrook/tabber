@@ -16,6 +16,7 @@ const UPDATE_USER = "http://localhost:5000/tabber/api/update_user";
 const VALIDATE_USER = "http://localhost:5000/tabber/api/validate_user";
 const ADD_CONVERSATION = "http://localhost:5000/tabber/api/add_conversation";
 const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
+const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -120,20 +121,18 @@ chrome.runtime.onConnect.addListener(function(port) {
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
 		}
-		else if (port.name == "get-folders") {
-			var sendFolders = function(folderList) {
-				console.log("Successfully retrieved folders.");
-				console.log(folderList);
+		else if (port.name == "get-conversations") {
+			// var sendFolders = function(folderList) {
 				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-					var fileManager = function(folders) {
+					var fileManager = function(folderList) {
 						var activeTab = tabs[0];
 						chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
 						console.log("Passed folder references to file manager.");
 					}
-					POST(GET_FOLDERS, {"authToken": oauth}, fileManager);
+					POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
 				});
-			}
-			POST(GET_FOLDERS, {"authToken": oauth}, sendFolders);
+			// }
+			// POST(GET_CONVERSATIONS, {"authToken": oauth}, sendFolders);
 		}
 	});
 });

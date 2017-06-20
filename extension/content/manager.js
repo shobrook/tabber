@@ -3,7 +3,7 @@
 /* GLOBALS */
 
 injectedFileManager = false;
-getFoldersPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-folders"});
+getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 
 /* MAIN */
 
@@ -38,6 +38,9 @@ var fileManager = function() {
 			return "<div style='overflow-y: scroll; height: 200px;'> " + folderListHTML + " </div><br>";
 		}
 
+
+		// Example nested structure: Use for testing
+
 		// {"folders": [{"_id": "...", "conversations": [...], "name": "...", "children": [...], "user_id": "..."}]}
 		// var folderList = {"folders": [
 		// 								{"_id": 12345, "conversations": [], "name": "Everything", "children": [
@@ -68,7 +71,7 @@ var fileManager = function() {
 		// 								], "user_id": "test_id"},
 		// 							]};
 
-		console.log(folderList);
+		// console.log(folderList);
 
 		var canvas = document.createElement('div');
 		var fileManager = document.createElement("div");
@@ -137,7 +140,7 @@ var fileManager = function() {
 	window.addEventListener('message', function(event) {
 		if (event.data.type && event.data.type == "tabber_file_manager") {
 			console.log("JS injection received: " + event.data.text);
-			window.postMessage({type: "get_folders", text: {}}, '*');
+			window.postMessage({type: "get_conversations", text: {}}, '*');
 		}
 	});
 
@@ -172,6 +175,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Passes get_folders request to background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "get_folders")
-		getFoldersPort.postMessage();
+	if (event.data.type && event.data.type == "get_conversations")
+		getConversationsPort.postMessage();
 });
