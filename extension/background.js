@@ -58,6 +58,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		}
 		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
+	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+	// 	var activeTab = tabs[0];
+	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+	// });
 });
 
 // Creates "Find Messages" in context menu and prompts file manager
@@ -115,6 +119,21 @@ chrome.runtime.onConnect.addListener(function(port) {
 				// TODO: Send success confirmation back to save.js
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
+		}
+		else if (port.name == "get-folders") {
+			var sendFolders = function(folderList) {
+				console.log("Successfully retrieved folders.");
+				console.log(folderList);
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var fileManager = function(folders) {
+						var activeTab = tabs[0];
+						chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
+						console.log("Passed folder references to file manager.");
+					}
+					POST(GET_FOLDERS, {"authToken": oauth}, fileManager);
+				});
+			}
+			POST(GET_FOLDERS, {"authToken": oauth}, sendFolders);
 		}
 	});
 });

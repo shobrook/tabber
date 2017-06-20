@@ -3,11 +3,12 @@
 /* GLOBALS */
 
 injectedFileManager = false;
+getFoldersPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-folders"});
 
 /* MAIN */
 
 var fileManager = function() {
-	var openFileManager = function() {
+	var openFileManager = function(folderList) {
 		console.log("Running file manager.");
 
 		var getFolderTreeViewRecursive = function(folder) {
@@ -37,36 +38,37 @@ var fileManager = function() {
 			return "<div style='overflow-y: scroll; height: 200px;'> " + folderListHTML + " </div><br>";
 		}
 
-		// TODO: Generate this via getFolders()
 		// {"folders": [{"_id": "...", "conversations": [...], "name": "...", "children": [...], "user_id": "..."}]}
-		var folderList = {"folders": [
-										{"_id": 12345, "conversations": [], "name": "Everything", "children": [
-											{"_id": 12346, "conversations": [
-												{"name": "Conversation 1", "messages": [
-													{"author": "Matthew", "message": "Message 1"},
-													{"author": "Jon", "message": "Message 2"},
-													{"author": "Matthew", "message": "Message 3"},
-												]},
-												{"name": "Conversation 2", "messages": [
-													{"author": "Matthew", "message": "Message 1"},
-													{"author": "Jon", "message": "Message 2"},
-												]}
-											], "name": "Folder 1", "children": [], "user_id": "test_id"},
-											{"_id": 12347, "conversations": [], "name": "Folder 2", "children": [
-												{"_id": 12348, "conversations": [], "name": "Folder 3", "children": [], "user_id": "test_id"},
-												{"_id": 12349, "conversations": [], "name": "Folder 4", "children": [
-													{"_id": 12350, "conversations": [
-														{"name": "Conversation 3", "messages": [
-															{"author": "Matthew", "message": "Message 1"},
-															{"author": "Jon", "message": "Message 2"},
-															{"author": "Matthew", "message": "Message 3"},
-															{"author": "Michael", "message": "Message 4"},
-														]}
-													], "name": "Folder 5", "children": [], "user_id": "test_id"}
-												], "user_id": "test_id"}
-											], "user_id": "test_id"}
-										], "user_id": "test_id"},
-									]};
+		// var folderList = {"folders": [
+		// 								{"_id": 12345, "conversations": [], "name": "Everything", "children": [
+		// 									{"_id": 12346, "conversations": [
+		// 										{"name": "Conversation 1", "messages": [
+		// 											{"author": "Matthew", "message": "Message 1"},
+		// 											{"author": "Jon", "message": "Message 2"},
+		// 											{"author": "Matthew", "message": "Message 3"},
+		// 										]},
+		// 										{"name": "Conversation 2", "messages": [
+		// 											{"author": "Matthew", "message": "Message 1"},
+		// 											{"author": "Jon", "message": "Message 2"},
+		// 										]}
+		// 									], "name": "Folder 1", "children": [], "user_id": "test_id"},
+		// 									{"_id": 12347, "conversations": [], "name": "Folder 2", "children": [
+		// 										{"_id": 12348, "conversations": [], "name": "Folder 3", "children": [], "user_id": "test_id"},
+		// 										{"_id": 12349, "conversations": [], "name": "Folder 4", "children": [
+		// 											{"_id": 12350, "conversations": [
+		// 												{"name": "Conversation 3", "messages": [
+		// 													{"author": "Matthew", "message": "Message 1"},
+		// 													{"author": "Jon", "message": "Message 2"},
+		// 													{"author": "Matthew", "message": "Message 3"},
+		// 													{"author": "Michael", "message": "Message 4"},
+		// 												]}
+		// 											], "name": "Folder 5", "children": [], "user_id": "test_id"}
+		// 										], "user_id": "test_id"}
+		// 									], "user_id": "test_id"}
+		// 								], "user_id": "test_id"},
+		// 							]};
+
+		console.log(folderList);
 
 		var canvas = document.createElement('div');
 		var fileManager = document.createElement("div");
@@ -135,7 +137,14 @@ var fileManager = function() {
 	window.addEventListener('message', function(event) {
 		if (event.data.type && event.data.type == "tabber_file_manager") {
 			console.log("JS injection received: " + event.data.text);
-			openFileManager();
+			window.postMessage({type: "get_folders", text: {}}, '*');
+		}
+	});
+
+	window.addEventListener('message', function(event) {
+		if (event.data.type && event.data.type == "tabber_folder_list") {
+			console.log("Folder list received: " + event.data.contents);
+			openFileManager(event.data.contents);
 		}
 	});
 }
@@ -155,4 +164,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 	if (request.message == "clicked_find_messages")
 		window.postMessage({type: 'tabber_file_manager', text: 'Find messages clicked.', contents: request.folders}, '*' );
+	if (request.message == "tabber_folder_list") {
+		console.log("Sent folderList to injected file manager")
+		window.postMessage({type: 'tabber_folder_list', text: 'folderList sent.', contents: request.folderList}, '*' );
+	}
+});
+
+// Passes get_folders request to background script
+window.addEventListener('message', function(event) {
+	if (event.data.type && event.data.type == "get_folders")
+		getFoldersPort.postMessage();
 });
