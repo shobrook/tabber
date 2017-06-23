@@ -8,6 +8,7 @@ chrome.identity.getAuthToken({interactive: true}, function(token) {
 		return;
 	}
 	oauth = token;
+	console.log(oauth);
 });
 
 // REST API endpoints
@@ -30,10 +31,13 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
+// Boolean for whether a user is using the extension for the first time
+var firstInstall;
+
 /* MAIN */
 
 // TODO: If user exits signup dialog, prompt dialog whenever user clicks browser action
-// TODO: Prompt login dialog only if on new device
+// TODO: Prompt login dialog only if on unrecognized device
 
 // Prompts the onboarding dialog on "first-install"; provides handler for extension updates
 chrome.runtime.onInstalled.addListener(function(details) {
@@ -52,6 +56,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
 // Passes user's folder references to save.js and prompts "select messages" dialog on click of browser action
 // NOTE: Toggle the two sections to assign browser action click to either login or message selection
 chrome.browserAction.onClicked.addListener(function(tab) {
+
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var saveDialog = function(folders) {
 			var activeTab = tabs[0];
@@ -60,10 +65,12 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		}
 		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
-	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-	// 	var activeTab = tabs[0];
-	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
-	// });
+/*
+	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+		 var activeTab = tabs[0];
+		chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+	});
+*/
 });
 
 // Creates "Find Messages" in context menu and prompts file manager
@@ -88,7 +95,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					// TODO: Send message to login.js confirming email validity
 					var onBoarding = function(userID) {
 						console.log("User has successfully registered.");
-						// TODO: Prompt the tutorial screen (send message to tutorial.js)
+						firstInstall = true;
 					}
 					POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, onBoarding);
 				} else if (!(JSON.parse(emailCheck).valid)) {
@@ -118,22 +125,25 @@ chrome.runtime.onConnect.addListener(function(port) {
 		} else if (port.name == "saved-messages") {
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
+				if (firstInstall) {
+					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+						var activeTab = tabs[0];
+						chrome.tabs.sendMessage(activeTab.id, {"message": "first_save"});
+					});
+					firstInstall = false;
+				}
 				// TODO: Send success confirmation back to save.js
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
-		}
-		else if (port.name == "get-conversations") {
-			// var sendFolders = function(folderList) {
-				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-					var fileManager = function(folderList) {
-						var activeTab = tabs[0];
-						chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
-						console.log("Passed folder references to file manager.");
-					}
-					POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
-				});
-			// }
-			// POST(GET_CONVERSATIONS, {"authToken": oauth}, sendFolders);
+		} else if (port.name == "get-conversations") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var fileManager = function(folderList) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
+					console.log("Passed folder references to file manager.");
+				}
+				POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
+			});
 		}
 	});
 });
