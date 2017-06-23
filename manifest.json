@@ -27,6 +27,6 @@
       "http://www.messenger.com/*",
       "https://www.messenger.com/*"
     ],
-    "js": ["extension/assets/jquery-3.2.1.min.js", "extension/content/save.js", "extension/content/manager.js", "extension/content/register.js"]
+    "js": ["extension/assets/jquery-3.2.1.min.js", "extension/content/save.js", "extension/content/manager.js", "extension/content/register.js", "extension/content/onboarding.js"]
   }]
 }
