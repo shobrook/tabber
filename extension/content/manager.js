@@ -4,6 +4,7 @@
 
 injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
+addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 
 /* MAIN */
 
@@ -95,7 +96,6 @@ var fileManager = function() {
 			});
 		}
 
-
 		// Example nested structure: Use for testing
 		// TODO: Change "folders" to be the root folder instead of a list of folders
 
@@ -179,12 +179,14 @@ var fileManager = function() {
 		var addFolderButton = document.getElementById("tabberAddFolder");
 		addFolderButton.addEventListener("click", function() {
 			currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
+
+			// Traverse until just before first conversation (currently we append to end instead)
 			// NOTE: Each conversation / folder has 2 corresponding elements: the <li> and the <ul> following it
-			var i;
-			for (i = 0; i < currentFolderChildren.length; i += 2) {
-				// First folder is detected; break
-				if (currentFolderChildren[i].classList.contains("tabberConversation")) break;
-			}
+			// var i;
+			// for (i = 0; i < currentFolderChildren.length; i += 2) {
+			// 	// First folder is detected; break
+			// 	if (currentFolderChildren[i].classList.contains("tabberConversation")) break;
+			// }
 
 			// New folder <li>
 			var newFolder = document.createElement("li");
@@ -192,11 +194,12 @@ var fileManager = function() {
 			newFolder.innerHTML = "New Folder";
 			newFolder.style.color = "#7B7F84";
 			newFolder.contentEditable = "true";
+			var parentName = CUR_SELECTED.innerHTML;
 			newFolder.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
-					// TODO: Send add folder request to server
-					console.log("Added folder to database")
+					window.postMessage({type: "add_folder", text: {name: this.innerText, parent: parentName}}, '*');
+					console.log("Added folder to database");
 				}
 			});
 			addFolderListeners(newFolder);
@@ -205,7 +208,9 @@ var fileManager = function() {
 			var newFolderList = document.createElement("ul");
 			newFolderList.style.marginLeft = "15px";
 
-			CUR_SELECTED.nextSibling.insertBefore(newFolderList, currentFolderChildren[i]);
+			// If we want to insert before a certain element, use the commented line
+			// CUR_SELECTED.nextSibling.insertBefore(newFolderList, currentFolderChildren[i]);
+			CUR_SELECTED.nextSibling.appendChild(newFolderList);
 			CUR_SELECTED.nextSibling.insertBefore(newFolder, newFolderList);
 
 			// Set cursor to end
@@ -266,9 +271,6 @@ var fileManager = function() {
 			console.log("JS injection received: " + event.data.text);
 			window.postMessage({type: "get_conversations", text: {}}, '*');
 		}
-	});
-
-	window.addEventListener('message', function(event) {
 		if (event.data.type && event.data.type == "tabber_folder_list") {
 			console.log("Folder list received: " + event.data.contents);
 			openFileManager(event.data.contents);
@@ -283,6 +285,7 @@ var injectFileManager = function() {
 	document.head.appendChild(script);
 }
 
+// Background script --> here --> injected JS
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request.message == "clicked_find_messages" && !injectedFileManager) {
 		console.log("User has clicked 'Find Messages' in the context menu.");
@@ -297,8 +300,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 });
 
-// Passes get_folders request to background script
+// Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "get_conversations")
 		getConversationsPort.postMessage();
+	if (event.data.type && event.data.type == "add_folder")
+		addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
 });

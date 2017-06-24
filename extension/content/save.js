@@ -236,6 +236,7 @@ var injectSaveMessages = function() {
 	document.head.appendChild(script);
 }
 
+// Background script --> here --> injected JS
 chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 	if (request.message == "clicked_browser_action" && !injectedSaveMessages) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
@@ -246,7 +247,7 @@ chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
-// Passes conversation payload to background script
+// Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
 		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");

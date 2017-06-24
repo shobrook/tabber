@@ -95,7 +95,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 });
 
-// Passes login or signup credentials to background script
+// Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "signup_credentials")
 		registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
@@ -103,6 +103,7 @@ window.addEventListener('message', function(event) {
 		loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
 });
 
+// Background script --> here --> injected JS
 registerPort.onMessage.addListener(function(msg) {
 	if (msg.validEmail == true || msg.validEmail == false)
 		window.postMessage({type: "validEmail", value: msg.validEmail});
