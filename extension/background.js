@@ -2,7 +2,7 @@
 
 // Pulls user's unique authentication token
 var oauth;
-chrome.identity.getAuthToken({interactive: true}, function(token) {
+chrome.identity.getAuthToken({interactive: false}, function(token) {
 	if (chrome.runtime.lastError) {
 		console.log("Error retrieving authToken: " + chrome.runtime.lastError.message);
 		return;
@@ -65,12 +65,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		}
 		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
-/*
-	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-		 var activeTab = tabs[0];
-		chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
-	});
-*/
+	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+	// 	 var activeTab = tabs[0];
+	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+	// });
 });
 
 // Creates "Find Messages" in context menu and prompts file manager

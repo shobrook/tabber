@@ -8,6 +8,10 @@ getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabbe
 /* MAIN */
 
 var fileManager = function() {
+
+	// Keeps track of the currently selected folder / conversation
+	CUR_SELECTED = "";
+
 	var openFileManager = function(folderList) {
 		console.log("Running file manager.");
 
@@ -35,7 +39,7 @@ var fileManager = function() {
 		var getFolderTreeView = function(folderList) {
 			var folderListHTML = "<ul><li class='tabberFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]) + "</ul>";
-			return "<div style='overflow-y: scroll; height: 200px;'> " + folderListHTML + " </div><br>";
+			return "<div style='overflow-y: auto; height: 200px; border: 1px solid #333;'> " + folderListHTML + " </div><br>";
 		}
 
 
@@ -93,30 +97,57 @@ var fileManager = function() {
 		fileManager.style.backgroundColor = "#FFFFFF";
 		fileManager.style.zIndex = "2147483647";
 
+		var currentFolderView = "<div style='height: 50px;'><input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'><input type='button' id='tabberAddFolder' value='+'><input type='button' id='tabberRenameFolder' value='/'><input type='button' id='tabberRemoveFolder' value='i'></div>";
 		var folderTreeView = getFolderTreeView(folderList);
-		var conversationView = "<div id='conversationDisplay' style='overflow-y: scroll; height: 200px;'>" + "Test Conversation" + "</div>";
+		var conversationView = "<div id='conversationDisplay' style='overflow-y: auto; height: 200px; border: 1px solid #333;'></div>";
 
-		fileManager.innerHTML = folderTreeView + conversationView + formDefs;
+		fileManager.innerHTML = currentFolderView + folderTreeView + conversationView + formDefs;
 
 		document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 		document.body.appendChild(fileManager); // Prompts the "save" dialog
 
-		// Toggles folder expand / collapse when clicked
 		var tabberFolders = document.getElementsByClassName("tabberFolder");
+		var tabberConversations = document.getElementsByClassName("tabberConversation");
+
+		// Folder event listeners
 		for (var i = 0; i < tabberFolders.length; i++) {
 			if (tabberFolders[i].nextSibling && tabberFolders[i].nextSibling.tagName.toLowerCase() == "ul") {
+				// Left click toggles folder expand / collapse when clicked
 				tabberFolders[i].addEventListener("click", function() {
+					var currentFolder = document.getElementById("currentFolderDisplay");
+					currentFolder.value = this.innerHTML;
+					// TODO: Efficientize all of this (store highlighted element as prev or something)
+					for (var i = 0; i < tabberFolders.length; i++) {
+						tabberFolders[i].style.backgroundColor = "";
+						// tabberFolders[i].classList.remove("tabberSelected");
+					}
+					for (var i = 0; i < tabberConversations.length; i++) {
+						tabberConversations[i].style.backgroundColor = "";
+						// tabberConversations[i].classList.remove("tabberSelected");
+					}
+					this.style.backgroundColor = "#CCC";
+					// this.classList.add("tabberSelected");
+					CUR_SELECTED = this;
+				}, false);
+				// Left click toggles folder expand / collapse when clicked
+				tabberFolders[i].addEventListener("dblclick", function() {
 					if (this.nextSibling.style.display == "none") {
 						this.nextSibling.style.display = "";
 					}
 					else this.nextSibling.style.display = "none";
 				}, false);
+				// TODO: Right click opens options menu
+				// TODO: Attach a document-wide contextmenu listener and check if mouse is on a folder?
+				// tabberFolders[i].addEventListener("contextmenu", function(e) {
+				// 	console.log(e);
+				// 	console.log("tabber folder contextmenu clicked");
+				// 	e.prevent
+				// }, false);
 			}
 		}
 
 		// Displays a conversation when clicked
 		var conversationDisplay = document.getElementById("conversationDisplay");
-		var tabberConversations = document.getElementsByClassName("tabberConversation");
 		for (var i = 0; i < tabberConversations.length; i++) {
 			tabberConversations[i].addEventListener("click", function() {
 				conversationDisplay.innerHTML = "";
@@ -124,9 +155,43 @@ var fileManager = function() {
 					var message = document.createElement('p');
 					message.innerHTML = this.nextSibling.childNodes[j].getAttribute("data-author") + ": " + this.nextSibling.childNodes[j].innerHTML;
 					conversationDisplay.appendChild(message);
+					// TODO: Efficientize all of this (store highlighted element as prev or something)
+					for (var i = 0; i < tabberFolders.length; i++) {
+						tabberFolders[i].style.backgroundColor = "";
+						// tabberFolders[i].classList.remove("tabberSelected");
+					}
+					for (var i = 0; i < tabberConversations.length; i++) {
+						tabberConversations[i].style.backgroundColor = "";
+						// tabberConversations[i].classList.remove("tabberSelected");
+					}
+					this.style.backgroundColor = "#CCC";
+					// this.classList.add("tabberSelected");
+					CUR_SELECTED = this;
 				}
 			});
 		}
+
+		// Adds a subfolder under the currently selected folder
+		var addFolderButton = document.getElementById("tabberAddFolder");
+		addFolderButton.addEventListener("click", function() {
+			console.log("Adding folder");
+			console.log(CUR_SELECTED);
+			// CUR_SELECTED = this;
+			// console.log(CUR_SELECTED);
+		});
+
+		// Renames the currently selected folder
+		var renameFolderButton = document.getElementById("tabberRenameFolder");
+		renameFolderButton.addEventListener("click", function() {
+			console.log("Renaming folder");
+		});
+
+		// Removes the currently selected folder (and everything in it)
+		var removeFolderButton = document.getElementById("tabberRemoveFolder");
+		removeFolderButton.addEventListener("click", function() {
+			console.log("Removing folder");
+		});
+
 
 		var cancelForm = document.getElementById("cancelButton");
 
