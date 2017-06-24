@@ -51,10 +51,18 @@ var registerPayload = function() {
 
 		window.postMessage({type: "signup_credentials", text: {"email": email, "password": password}}, '*');
 
-		// TODO: Validate user's email
-
-		document.body.removeChild(signUpDialog);
-		document.body.removeChild(canvas);
+		window.addEventListener('message', function(event) {
+			if (event.data.type == "register") {
+				if (event.data.value) {
+					document.body.removeChild(signUpDialog);
+					document.body.removeChild(canvas);
+					console.log("User successfully registered.");
+				} else if (!(event.data.value)) {
+					// TODO: Update sign-up dialog with error message
+					console.log("User unsuccessfully registered.");
+				}
+			}
+		});
 	}
 
 	login.onclick = function() {
@@ -93,4 +101,11 @@ window.addEventListener('message', function(event) {
 		registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
 	else if (event.data.type && event.data.type == "login_credentials")
 		loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
+});
+
+registerPort.onMessage.addListener(function(msg) {
+	if (msg.validEmail == true || msg.validEmail == false)
+		window.postMessage({type: "validEmail", value: msg.validEmail);
+	else if (msg.registered == true || msg.registered == false)
+		window.postMessage({type: "registered", value: msg.registered});
 });

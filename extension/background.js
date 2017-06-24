@@ -1,6 +1,6 @@
 /* GLOBALS */
 
-// Pulls user's unique authentication token
+// Pulls user's unique authentication token; TODO: Needs to be fixed!
 var oauth;
 chrome.identity.getAuthToken({interactive: false}, function(token) {
 	if (chrome.runtime.lastError) {
@@ -37,7 +37,6 @@ var firstInstall;
 /* MAIN */
 
 // TODO: If user exits signup dialog, prompt dialog whenever user clicks browser action
-// TODO: Prompt login dialog only if on unrecognized device
 
 // Prompts the onboarding dialog on "first-install"; provides handler for extension updates
 chrome.runtime.onInstalled.addListener(function(details) {
@@ -90,15 +89,16 @@ chrome.runtime.onConnect.addListener(function(port) {
 			var addUser = function(emailCheck) {
 				if (JSON.parse(emailCheck).valid) {
 					console.log("Email is valid. Registering user.");
-					// TODO: Send message to login.js confirming email validity
+					port.postMessage({validEmail: true}); // Pass valid email
 					var onBoarding = function(userID) {
 						console.log("User has successfully registered.");
+						port.postMessage({registered: true}); // Pass successful registration
 						firstInstall = true;
 					}
 					POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, onBoarding);
 				} else if (!(JSON.parse(emailCheck).valid)) {
 					console.log("Email is invalid. Try again.");
-					// TODO: Send message to login.js confirming email invalidity
+					port.postMessage({validEmail: false}); // Pass invalid email
 				}
 			}
 			POST(VALIDATE_USER, {"email": msg.email}, addUser);
