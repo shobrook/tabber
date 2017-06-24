@@ -16,7 +16,7 @@ var fileManager = function() {
 		console.log("Running file manager.");
 
 		var getFolderTreeViewRecursive = function(folder) {
-			var folderListHTML = "<ul style='padding-left: 15px;'>";
+			var folderListHTML = "<ul style='margin-left: 15px;'>";
 			// NOTE: Switch the order of these loops to change whether conversations or subfolders come first
 			for (var i = 0; i < folder["conversations"].length; i++) {
 				folderListHTML += "<li class='tabberConversation' style='color: #2C9ED4; margin: 0;'>" + folder["conversations"][i]["name"] + "</li>";
@@ -49,7 +49,6 @@ var fileManager = function() {
 				var currentFolder = document.getElementById("currentFolderDisplay");
 				currentFolder.value = this.innerHTML;
 				// TODO: Efficientize all of this (store highlighted element as prev or something)
-				console.log(tabberFolders);
 				for (var i = 0; i < tabberFolders.length; i++) {
 					tabberFolders[i].style.backgroundColor = "";
 					// tabberFolders[i].classList.remove("tabberSelected");
@@ -190,16 +189,32 @@ var fileManager = function() {
 			// New folder <li>
 			var newFolder = document.createElement("li");
 			newFolder.classList.add("tabberFolder");
-			newFolder.innerHTML = "Something";
-			newFolder.contentEditable = "true"; // TODO: Make enter key turn this to false and send request to database
+			newFolder.innerHTML = "New Folder";
+			newFolder.style.color = "#7B7F84";
+			newFolder.contentEditable = "true";
+			newFolder.addEventListener("keydown", function(e) {
+				if (e.key == "Enter") {
+					this.contentEditable = false;
+					// TODO: Send add folder request to server
+					console.log("Added folder to database")
+				}
+			})
 			addFolderListeners(newFolder);
 
 			// New folder <ul> element
 			var newFolderList = document.createElement("ul");
-			newFolderList.style.paddingLeft = "15px";
+			newFolderList.style.marginLeft = "15px";
 
 			CUR_SELECTED.nextSibling.insertBefore(newFolderList, currentFolderChildren[i]);
 			CUR_SELECTED.nextSibling.insertBefore(newFolder, newFolderList);
+
+			// Set cursor to end
+			var range = document.createRange();
+			var sel = window.getSelection();
+			range.setStart(newFolder, 1);
+			sel.removeAllRanges();
+			sel.addRange(range);
+			newFolder.focus();
 		});
 
 		// Renames the currently selected folder
