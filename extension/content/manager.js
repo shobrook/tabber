@@ -220,7 +220,6 @@ var fileManager = function() {
 		// Renames the currently selected folder
 		var renameFolderButton = document.getElementById("tabberRenameFolder");
 		renameFolderButton.addEventListener("click", function() {
-			console.log(CUR_SELECTED);
 			CUR_SELECTED.contentEditable = true;
 
 			CUR_SELECTED.addEventListener("keydown", function(e) {
@@ -241,9 +240,14 @@ var fileManager = function() {
 		});
 
 		// Removes the currently selected folder (and everything in it)
+		// TODO: Add confirmation dialog
 		var removeFolderButton = document.getElementById("tabberRemoveFolder");
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
+			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
+			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
+
+			// TODO: Send delete folder request to server
 		});
 
 
