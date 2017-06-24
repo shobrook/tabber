@@ -198,7 +198,7 @@ var fileManager = function() {
 					// TODO: Send add folder request to server
 					console.log("Added folder to database")
 				}
-			})
+			});
 			addFolderListeners(newFolder);
 
 			// New folder <ul> element
@@ -220,7 +220,24 @@ var fileManager = function() {
 		// Renames the currently selected folder
 		var renameFolderButton = document.getElementById("tabberRenameFolder");
 		renameFolderButton.addEventListener("click", function() {
-			console.log("Renaming folder");
+			console.log(CUR_SELECTED);
+			CUR_SELECTED.contentEditable = true;
+
+			CUR_SELECTED.addEventListener("keydown", function(e) {
+				if (e.key == "Enter") {
+					this.contentEditable = false;
+					// TODO: Send rename folder request to server
+					console.log("Renamed folder in database")
+				}
+			})
+
+			// Set cursor to end
+			var range = document.createRange();
+			var sel = window.getSelection();
+			range.setStart(CUR_SELECTED, 1);
+			sel.removeAllRanges();
+			sel.addRange(range);
+			CUR_SELECTED.focus();
 		});
 
 		// Removes the currently selected folder (and everything in it)
