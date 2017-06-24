@@ -105,7 +105,7 @@ window.addEventListener('message', function(event) {
 
 registerPort.onMessage.addListener(function(msg) {
 	if (msg.validEmail == true || msg.validEmail == false)
-		window.postMessage({type: "validEmail", value: msg.validEmail);
+		window.postMessage({type: "validEmail", value: msg.validEmail});
 	else if (msg.registered == true || msg.registered == false)
 		window.postMessage({type: "registered", value: msg.registered});
 });
