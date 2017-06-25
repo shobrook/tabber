@@ -40,23 +40,7 @@ def new_user():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "new_user(): request.json does not exist or does not contain 'authToken'")
 
-	root_id = mongo.db.folders.insert({
-		"name": "root",
-		"children": [],
-		"conversations": []
-	})
-	user_id = mongo.db.users.insert({
-		"authToken": [request.json["authToken"]],
-		"email": request.json["email"],
-		"password": request.json["password"],
-		"root": root_id
-	})
-	mongo.db.folders.update_one({
-		"_id": root_id},
-		{"$set": {"user_id": ObjectId(str(user_id))}
-	}, upsert=False)
-
-	return jsonify({"user_id": str(user_id)})
+	return jsonify({"user_id": utilities.add_user(mongo, request.json)})
 
 # Updates a user's authToken list with new device
 @app.route("/tabber/api/update_user", methods=["POST"])
@@ -65,20 +49,7 @@ def update_user():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "update_user(): request.json does not exist or does not contain 'authToken'")
 
-	user = mongo.db.users.find_one({
-		"email": request.json["email"],
-		"password": request.json["password"]
-	})
-	if request.json["authToken"] in user["authToken"]:
-		return jsonify({"updated": False})
-	else:
-		mongo.db.users.update_one({
-			"email": request.json["email"],
-			"password": request.json["password"]},
-			{"$push": {"authToken": request.json["authToken"]}
-		}, True)
-
-	return jsonify({"updated": True})
+	return jsonify({"updated": utilities.update_user(mongo, request.json)})
 
 # Checks if a given email or email/password combo is already registered
 @app.route("/tabber/api/validate_user", methods=["POST"])
@@ -87,16 +58,7 @@ def validate_user():
 	if not request.json or not "email" in request.json:
 		return abort(400, "validate_user(): request.json does not exist or does not contain 'email'")
 
-	if not "password" in request.json:
-		for u in mongo.db.users.find():
-			if u["email"] == request.json["email"]:
-				return jsonify({"valid": False})
-		return jsonify({"valid": True})
-
-	for u in mongo.db.users.find():
-		if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
-			return jsonify({"valid": True})
-	return jsonify({"valid": False})
+	return jsonify({"valid": utilities.validate_user(mongo, request.json)})
 
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])
@@ -105,19 +67,7 @@ def add_conversation():
 	if not request.json or not "authToken" in request.json:
 		return abort(400, "add_conversation(): request.json does not exist or does not contain 'authToken'")
 
-	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
-	folder = mongo.db.folders.find_one({"name": request.json["folder"], "user_id": ObjectId(str(user["_id"]))})
-	convo = {
-		"name": request.json["name"],
-		"messages": request.json["messages"],
-		"folder": folder["_id"]
-	}
-	convo_id = mongo.db.conversations.insert(convo)
-	mongo.db.folders.update_one({
-		"_id": folder["_id"]},
-		{"$push": {"conversations": ObjectId(str(convo_id))}
-	}, True)
-	return jsonify({"convo_id": str(convo_id)})
+	return jsonify({"convo_id": utilities.add_conversation(mongo, request.json)})
 
 # Creates new folder given a parent directory
 @app.route("/tabber/api/add_folder", methods=["POST"])
@@ -126,7 +76,7 @@ def add_folder():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "add_folder(): request.json does not exist or does not contain 'authToken'")
 
-	return jsonify({"folder_id": str(utilities.add_folder(mongo, request.json))})
+	return jsonify({"folder_id": utilities.add_folder(mongo, request.json)})
 
 # Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
 @app.route("/tabber/api/get_folders", methods=["POST"])
@@ -135,13 +85,7 @@ def get_folders():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "get_folders(): request.json does not exist or does not contain 'authToken'")
 
-	user = mongo.db.users.find_one({"authToken": request.json["authToken"]})
-	output = []
-	for f in mongo.db.folders.find():
-		if f["user_id"] == ObjectId(str(user["_id"])):
-			output.append(f["name"])
-
-	return jsonify({"folders": output})
+	return jsonify({"folders": utilities.get_folders(mongo, request.json)})
 
 # Returns all of a user's conversations in a nester structure of folders
 @app.route("/tabber/api/get_conversations", methods=["POST"])
@@ -152,39 +96,23 @@ def get_conversations():
 
 	return jsonify({"folders": utilities.get_all_content(mongo, request.json)})
 
+# Renames the specified folder
+@app.route("/tabber/api/rename_folder", methods=["POST"])
+def rename_folder():
+	# Request: {"authToken": "...", "name": "...", "newName": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "rename_folder(): request.json does not exist or does not contain 'authToken'")
+
+	return jsonify({"folders": utilities.rename_folder(mongo, request.json)})
+
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
 def get_database():
-	users = []
-	folders = []
-	conversations = []
-
-	for u in mongo.db.users.find():
-		users.append({
-			"_id": str(u["_id"]),
-			"authToken": u["authToken"],
-			"email": u["email"],
-			"password": u["password"],
-			"root": str(u["root"])
-		})
-	for f in mongo.db.folders.find():
-		folders.append({
-			"_id": str(f["_id"]),
-			"user_id": str(f["user_id"]),
-			"name": f["name"],
-			"children": f["children"],
-			"conversations": f["conversations"]
-		})
-	for c in mongo.db.conversations.find():
-		conversations.append({
-			"_id": str(c["_id"]),
-			"name": c["name"],
-			"messages": c["messages"]
-		})
-
+	users, folders, conversations = utilities.get_database(mongo)
 	return jsonify({"users": users, "folders": folders, "conversations": conversations})
 
 # TODO: Add endpoints for renaming folders and conversations
+
 
 
 ####ERROR HANDLING####

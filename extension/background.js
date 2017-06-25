@@ -18,6 +18,8 @@ const VALIDATE_USER = "http://localhost:5000/tabber/api/validate_user";
 const ADD_CONVERSATION = "http://localhost:5000/tabber/api/add_conversation";
 const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
 const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
+const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
+const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -65,7 +67,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
 	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-	// 	 var activeTab = tabs[0];
+	// 	var activeTab = tabs[0];
 	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
 	// });
 });
@@ -82,7 +84,20 @@ chrome.contextMenus.create({
 	}
 });
 
-// Listens for messages passed from all content scripts
+// Creates "Sign In" in context menu and prompts file manager
+// TODO: Eventually changed this to "Log In" once we have a separate login dialog
+chrome.contextMenus.create({
+	title: "Sign Up",
+	contexts: ["browser_action"],
+	onclick: function () {
+		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+			var activeTab = tabs[0];
+			chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+		});
+	}
+});
+
+// Content scripts --> here --> server.py
 chrome.runtime.onConnect.addListener(function(port) {
 	port.onMessage.addListener(function(msg) {
 		if (port.name == "register") {
@@ -102,7 +117,8 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 			}
 			POST(VALIDATE_USER, {"email": msg.email}, addUser);
-		} else if (port.name == "login") {
+		}
+		else if (port.name == "login") {
 			var updateTokens = function(credCheck) {
 				if (JSON.parse(credCheck).valid) {
 					console.log("Valid credentials. Logging in user.");
@@ -120,7 +136,8 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 			}
 			POST(VALIDATE_USER, {"email": msg.email, "password": msg.password}, updateTokens);
-		} else if (port.name == "saved-messages") {
+		}
+		else if (port.name == "saved-messages") {
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
 				if (firstInstall) {
@@ -133,7 +150,8 @@ chrome.runtime.onConnect.addListener(function(port) {
 				// TODO: Send success confirmation back to save.js
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
-		} else if (port.name == "get-conversations") {
+		}
+		else if (port.name == "get-conversations") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var fileManager = function(folderList) {
 					var activeTab = tabs[0];
@@ -141,6 +159,24 @@ chrome.runtime.onConnect.addListener(function(port) {
 					console.log("Passed folder references to file manager.");
 				}
 				POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
+			});
+		}
+		else if (port.name == "add-folder") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var addedFolder = function() {
+					// TODO: Send confirmation to the content scripts
+					console.log("Folder was (supposedly) added to the database.");
+				}
+				POST(ADD_FOLDER, {"authToken": oauth, "parent": msg.parent, "name": msg.name}, addedFolder);
+			});
+		}
+		else if (port.name == "rename-folder") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var renamedFolder = function() {
+					// TODO: Send confirmation to the content scripts
+					console.log("Folder was (supposedly) renamed.");
+				}
+				POST(RENAME_FOLDER, {"authToken": oauth, "name": msg.name, "newName": msg.newName}, renamedFolder);
 			});
 		}
 	});
