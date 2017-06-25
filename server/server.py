@@ -49,8 +49,7 @@ def update_user():
 	if not request.json or not "authToken" in request.json:
 		abort(400, "update_user(): request.json does not exist or does not contain 'authToken'")
 
-	utilities.update_user(mongo, request.json)
-	return jsonify({"updated": True})
+	return jsonify({"updated": utilities.update_user(mongo, request.json)})
 
 # Checks if a given email or email/password combo is already registered
 @app.route("/tabber/api/validate_user", methods=["POST"])
@@ -97,6 +96,15 @@ def get_conversations():
 
 	return jsonify({"folders": utilities.get_all_content(mongo, request.json)})
 
+# Renames the specified folder
+@app.route("/tabber/api/rename_folder", methods=["POST"])
+def rename_folder():
+	# Request: {"authToken": "...", "name": "...", "newName": "..."}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "rename_folder(): request.json does not exist or does not contain 'authToken'")
+
+	return jsonify({"folders": utilities.rename_folder(mongo, request.json)})
+
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
 def get_database():
@@ -104,6 +112,7 @@ def get_database():
 	return jsonify({"users": users, "folders": folders, "conversations": conversations})
 
 # TODO: Add endpoints for renaming folders and conversations
+
 
 
 ####ERROR HANDLING####

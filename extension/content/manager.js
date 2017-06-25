@@ -5,6 +5,7 @@
 injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
+renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
 
 /* MAIN */
 
@@ -226,11 +227,11 @@ var fileManager = function() {
 		var renameFolderButton = document.getElementById("tabberRenameFolder");
 		renameFolderButton.addEventListener("click", function() {
 			CUR_SELECTED.contentEditable = true;
-
+			var oldName = CUR_SELECTED.innerText;
 			CUR_SELECTED.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
-					// TODO: Send rename folder request to server
+					window.postMessage({type: "rename_folder", text: {name: oldName, newName: this.innerText}}, '*');
 					console.log("Renamed folder in database")
 				}
 			})
@@ -266,9 +267,11 @@ var fileManager = function() {
 		console.log("Displayed file manager.");
 	}
 
+	// Content scripts --> here --> injected JS
 	window.addEventListener('message', function(event) {
 		if (event.data.type && event.data.type == "tabber_file_manager") {
 			console.log("JS injection received: " + event.data.text);
+			// Sends request to get all conversations once file manager is opened
 			window.postMessage({type: "get_conversations", text: {}}, '*');
 		}
 		if (event.data.type && event.data.type == "tabber_folder_list") {
@@ -288,12 +291,14 @@ var injectFileManager = function() {
 // Background script --> here --> injected JS
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request.message == "clicked_find_messages" && !injectedFileManager) {
-		console.log("User has clicked 'Find Messages' in the context menu.");
+		console.log("Sent request to inject file manager.");
 		injectedFileManager = true;
 		injectFileManager();
 	}
-	if (request.message == "clicked_find_messages")
+	if (request.message == "clicked_find_messages") {
+		console.log("Sent request to open injected file manager")
 		window.postMessage({type: 'tabber_file_manager', text: 'Find messages clicked.', contents: request.folders}, '*' );
+	}
 	if (request.message == "tabber_folder_list") {
 		console.log("Sent folderList to injected file manager")
 		window.postMessage({type: 'tabber_folder_list', text: 'folderList sent.', contents: request.folderList}, '*' );
@@ -306,4 +311,6 @@ window.addEventListener('message', function(event) {
 		getConversationsPort.postMessage();
 	if (event.data.type && event.data.type == "add_folder")
 		addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
+	if (event.data.type && event.data.type == "rename_folder")
+		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
 });

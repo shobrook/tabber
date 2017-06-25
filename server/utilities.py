@@ -134,7 +134,11 @@ def add_conversation(mongo, request_json):
 # EDITING
 
 def rename_folder(mongo, request_json):
-	pass
+	mongo.db.folders.update_one({
+		"name": request_json["name"]},
+		{"$set": {"name": request_json["newName"]}
+	}, True)
+	return True
 
 def update_user(mongo, request_json):
 	user = mongo.db.users.find_one({
@@ -142,13 +146,14 @@ def update_user(mongo, request_json):
 		"password": request_json["password"]
 	})
 	if request_json["authToken"] in user["authToken"]:
-		return jsonify({"updated": False})
+		return False
 	else:
 		mongo.db.users.update_one({
 			"email": request_json["email"],
 			"password": request_json["password"]},
 			{"$push": {"authToken": request_json["authToken"]}
 		}, True)
+	return True
 
 
 
@@ -179,8 +184,11 @@ if __name__ == "__main__":
 	mongo = PyMongo(app)
 
 	with app.app_context():
-		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g'}
-		pp.pprint(get_all_content(mongo, request_json))
+		# request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g'}
+		# pp.pprint(get_all_content(mongo, request_json))
 
 		# request_json = {u'parent': 'root', u'name': 'New Folder', u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g'}
 		# pp.pprint(add_folder(mongo, request_json))
+
+		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g', "name": "New Folder", "newName": "Renamed Folder"}
+		pp.pprint(rename_folder(mongo, request_json))
