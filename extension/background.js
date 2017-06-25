@@ -57,18 +57,18 @@ chrome.runtime.onInstalled.addListener(function(details) {
 // NOTE: Toggle the two sections to assign browser action click to either login or message selection
 chrome.browserAction.onClicked.addListener(function(tab) {
 
-	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-	// 	var saveDialog = function(folders) {
-	// 		var activeTab = tabs[0];
-	// 		chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_browser_action", "folders": JSON.parse(folders).folders});
-	// 		console.log("Passed folder references to save dialog.");
-	// 	}
-	// 	POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
-	// });
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-		 var activeTab = tabs[0];
-		chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+		var saveDialog = function(folders) {
+			var activeTab = tabs[0];
+			chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_browser_action", "folders": JSON.parse(folders).folders});
+			console.log("Passed folder references to save dialog.");
+		}
+		POST(GET_FOLDERS, {"authToken": oauth}, saveDialog);
 	});
+	// chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+	// 	 var activeTab = tabs[0];
+	// 	chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+	// });
 });
 
 // Creates "Find Messages" in context menu and prompts file manager
