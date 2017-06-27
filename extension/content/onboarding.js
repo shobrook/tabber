@@ -1,8 +1,8 @@
-// TODO: Add a protip for seleting / saving conversations
+// TODO: Add a protip for selecting / saving conversations
 
 /* GLOBALS */
 
-// Nothin' here yet
+var onboardingPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "onboarding"});
 
 /* MAIN */
 
@@ -12,22 +12,22 @@ var protipPayload = function() {
 	var canvas = document.createElement('div');
 	var protip = document.createElement("div");
 
-	// TODO: Update font-family with Neuzeit S LT Std
-	// TODO: Polish the text padding and overflow behavior
-	// TODO: Add in a picture of the extension icon
-	var tip_defs = `<div id="contents" style="text-align: center; color: #7D848E; font-family: Helvetica; padding-top: 4%;">
-										<h3 style="font-size: 15px; font-weight: 600;"> You just saved your first conversation! </h3>
-										<p style="font-weight: 400; font-size: 14px; width: 79%; margin-left: auto; margin-right: auto;"> Right-click the extension icon and select "Find Messages" to access your saved conversations. </p>
-										<input id="got-it" type="submit" value="Got it!" style="border: none; color: #FFFFFF; background-color: #2C9ED4; text-align: center; font-family: Helvetica; font-size: 14px; font-weight: 400; padding: 12px 10%; border-radius: 12px 2px 12px 2px; cursor: pointer; margin-top: 3.05%;">
+	// TODO: Update font-family with Neuzeit S LT Std (imported locally)
+	// TODO: Add in a picture of the extension icon (probably change the line spacing too)
+	var tip_defs = `<div style="top: 5.5%; text-align: center; padding-top: 4%; position: relative;">
+										<h3 style="font-family: Helvetica; font-size: 15px; font-weight: 600; color: rgb(125,132,142);"> You just saved your first conversation! </h3>
+										<p style="font-family: Helvetica; font-weight: 400; font-size: 14px; color: rgb(125,132,142); width: 79%; margin-left: auto; margin-right: auto;"> Right-click the extension icon and select "Find Messages" to access your saved conversations. </p>
+										<form id="form-wrapper"><input id="got-it" type="submit" value="Got it!" style="border: none; color: rgb(255,255,255); background-color: rgb(44,158,212); text-align: center; font-family: Helvetica; font-size: 14px; font-weight: 400; padding: 12px 10%; border-radius: 12px 2px 12px 2px; cursor: pointer; margin-top: 3.05%; outline: none;"></form>
 									</div>`;
 
 	canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 
 	protip.style.position = "fixed";
-	protip.style.width = "27%";
+	protip.style.width = "390px"; // 27%
 	protip.style.height = "190px";
 	protip.style.top = "50%";
-	protip.style.left = "36.5%";
+	protip.style.left = "50%"; // 36.5%
+	protip.style.marginLeft = "-195px";
 	protip.style.transform = "translateY(-50%)";
 	protip.style.borderRadius = "10px";
 	protip.style.backgroundColor = "#FFFFFF";
@@ -39,22 +39,31 @@ var protipPayload = function() {
 	document.body.appendChild(protip); // Prompts the "sign up" dialog
 
 	var confirm = document.getElementById("got-it");
+	var form = document.getElementById("form-wrapper");
 
+	// NOTE: Not the best or most sustainable alternative to :hover
 	confirm.onmouseover = function() {
-		this.style.backgroundColor = "#52AFDB";
+		this.style.backgroundColor = "rgb(101,184,203)";
 	}
 
-	confirm.onsubmit = function() {
+	// NOTE: Not the best or most sustainable alternative to :hover
+	confirm.onmouseout = function() {
+		this.style.backgroundColor = "rgb(44,158,212)";
+	}
+
+	form.onsubmit = function() {
+		console.log("User confirmed protip.");
+		window.postMessage({type: "submit", submitted: true}, '*');
+
 		document.body.removeChild(protip);
 		document.body.removeChild(canvas);
 	}
 
 	canvas.onclick = function() {
-		document.body.removeChild(tutorial);
-		document.body.removeChild(canvas);
+		window.postMessage({type: "submit", submitted: false}, '*');
 
-		// TODO: When canvas is clicked, the protip should still display each time a conversation
-		// is saved (until "Got It" is clicked)
+		document.body.removeChild(protip);
+		document.body.removeChild(canvas);
 	}
 
 	console.log("Displayed an onboarding tooltip.");
@@ -73,4 +82,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		console.log("User has saved a conversation for the first time.");
 		protipInject();
 	}
+});
+
+// Injected JS --> here --> background script
+window.addEventListener('message', function(event) {
+	if (event.data.type && event.data.type == "submit")
+		onboardingPort.postMessage({submitted: event.data.submitted});
 });
