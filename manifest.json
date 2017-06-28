@@ -10,7 +10,7 @@
   ],
   "oauth2": {
     "client_id": "557897042954-o3obikdtoprmoungto84a0jkgum3cahv.apps.googleusercontent.com",
-    "scopes": ["profile"]
+    "scopes": ["profile", "openid", "email"]
   },
   "browser_action": {
     "default_icon": "extension/assets/icon.png",
