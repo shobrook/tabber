@@ -1,9 +1,7 @@
-// TODO: Stylize the save dialog
-
 /* GLOBALS */
 
-var messagePort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
-injectedSaveMessages = false;
+var conversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "conversations"});
+injectedSaveConversation = false;
 
 /* MAIN */
 
@@ -11,9 +9,8 @@ console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
-var saveMessages = function() {
-	// NOTE: This is placed outside messages so that it immediately scrapes the messages while the rest of the JS is being injected
-	var scrapeAllMessages = function() {
+var saveConversation = function() {
+	var scrapeLoadedMessages = function() {
 		var scrapedMessages = []; // All loaded messages and their respective author + coordinates, in chronological order
 
 		var containerNode = document.getElementsByClassName('__i_')[0];
@@ -28,14 +25,12 @@ var saveMessages = function() {
 
 							if (msgNode == undefined || msgNode == null) continue; // Detects if message is rich media content
 
-							var messageContents = msgNode.textContent;
 							var author = 0; // 0 for sent, 1 for received
-							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)") {
+							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)")
 								author = 1;
-							}
 							var position = msgNode.getBoundingClientRect();
 
-							scrapedMessages.push({"author": author, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
+							scrapedMessages.push({"author": author, "message": msgNode.textContent, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
 				});
@@ -54,7 +49,6 @@ var saveMessages = function() {
 		var initSVG = function() {
 			console.log("Initializing canvas.");
 
-			// NOTE: Change this to change where mask is placed
 			var mask_target = document.body;
 
 			var svg_defs = `<svg id="tabber_svg" width="100%" height="100%">
@@ -123,7 +117,7 @@ var saveMessages = function() {
 
 		initSVG();
 
-		messages = scrapeAllMessages();
+		messages = scrapeLoadedMessages();
 		var selectedMessages = []; // Selected messages distinguished by author (ordered chronologically)
 
 		// Filters messages through region bounds and append to selectedMessages
@@ -161,7 +155,9 @@ var saveMessages = function() {
 			console.log("JS injection received: " + event.data.text);
 
 			selectMessages(function(selectedMessages) {
-				// TODO: Pull folders with the most content from messages.json
+				// TODO: Implement an option to display an expanded file view
+
+				// HTML generator for the folder dropdown
 				var folderHTML = "";
 				event.data.contents.forEach(function(f) {
 					folderHTML += "<option> " + f + " </option> ";
@@ -169,14 +165,18 @@ var saveMessages = function() {
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
+
 				var formDefs = `<form id="saveForm">
-									<label for="name"> Name: </label>
-									<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
-									<label for="folder"> Folder: </label>
-									<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">` + folderHTML +
-									`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
-									<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
-								</form>`;
+													<label for="name"> Name: </label>
+													<input type="text" id="nameInput" name="name" value="`
+														+ selectedMessages[0].message +
+													`" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
+													<label for="folder"> Folder: </label>
+													<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">`
+														+ folderHTML +
+													`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
+													<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
+												</form>`;
 
 				canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 
@@ -188,7 +188,6 @@ var saveMessages = function() {
 				saveDialog.style.borderRadius = "5px";
 				saveDialog.style.padding = "20px";
 				saveDialog.style.backgroundColor = "#FFFFFF";
-				//saveDialog.style.boxShadow = "0px 1px 4px #000000";
 				saveDialog.style.zIndex = "2147483647";
 
 				// HTML generator for selected messages preview
@@ -204,19 +203,15 @@ var saveMessages = function() {
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
 
-				console.log("Prompted saved dialog.");
+				console.log("Prompted dialog for saving conversations.");
 
 				var saveForm = document.getElementById("saveForm");
 				var cancelForm = document.getElementById("cancelButton");
 
-				saveForm.onsubmit = function() {
-					var name = document.getElementById("saveForm").name.value;
-					var folder = document.getElementById("saveForm").folder.value;
+				// TODO: Implement an onClick handler for an expanded folder view
 
-					// TODO: Detect whether user created new folder
-					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "newFolder": 0, "messages": selectedMessages}}, '*');
-
-					document.body.removeChild(saveDialog);
+				canvas.onclick = function() {
+					document.body.removeChild(signUpDialog);
 					document.body.removeChild(canvas);
 				}
 
@@ -224,33 +219,53 @@ var saveMessages = function() {
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
+
+				saveForm.onsubmit = function() {
+					var name = (this).name.value;
+					var folder = (this).folder.value;
+
+					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
+					window.addEventListener('message', function(event) {
+						if (event.data.type == 'save-confirmation' && event.data.value) {
+							// TODO: Implement a sweet alert notification for successfully saved convos
+							document.body.removeChild(saveDialog);
+							document.body.removeChild(canvas);
+						}
+					})
+				}
 			});
 		}
 	});
 }
 
 // Prepares the JS injection
-var injectSaveMessages = function() {
+var injectSaveConversation = function() {
 	var script = document.createElement('script');
-	script.textContent = "(" + saveMessages.toString() + ")();";
+	script.textContent = "(" + saveConversation.toString() + ")();";
 	document.head.appendChild(script);
 }
 
-// Background script --> here --> injected JS
+// Listens for browser action click
 chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
-	if (request.message == "clicked_browser_action" && !injectedSaveMessages) {
+	if (request.message == "clicked_browser_action" && !injectedSaveConversation) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
-		injectedSaveMessages = true;
-		injectSaveMessages();
+		injectedSaveConversation = true;
+		injectSaveConversation();
 	}
 	if (request.message == "clicked_browser_action")
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
-// Injected JS --> here --> background script
+// Passes conversation payload to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
 		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
-		messagePort.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
+		conversationPort.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
 	}
+});
+
+// Receives "saved conversation" confirmation from background script
+conversationPort.onMessage.addListener(function(msg) {
+	if (msg.saved)
+		window.postMessage({type: 'save-confirmation', value: msg.saved}, '*');
 });
