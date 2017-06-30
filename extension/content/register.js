@@ -244,9 +244,10 @@ var registerPayload = function() {
 	}
 
 	loginForm.onclick = function() {
-		var email = signUpForm.tabberEmail.value;
-		var password = signUpForm.tabberPass.value;
+		var email = (this).tabberEmail.value;
+		var password = (this).tabberPass.value;
 
+		console.log(email + " " + password);
 		window.postMessage({type: "login_credentials", text: {"email": email, "password": password}}, '*');
 	}
 
@@ -255,7 +256,7 @@ var registerPayload = function() {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully registered.");
-		} else if (event.data.type == "signUpValidation" && !(event.data.value)) { // TODO: Determine if email is already taken or invalid
+		} else if (event.data.type == "signUpValidation" && !(event.data.value)) {
 			signUpForm.reset();
 			console.log("User tried signing up with invalid email.");
 		} else if (event.data.type == "loginValidation" && event.data.value) {

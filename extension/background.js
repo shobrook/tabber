@@ -129,8 +129,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 			}
 			POST(VALIDATE_USER, {"email": msg.email}, addUser);
-			// TODO: Validate that email has a proper domain
-			// TODO: Compartmentalize all validation (valid email provider, email already in use) in server.py
+			// TODO: Comparmentalize email validation in the NEW_USER route in server.py
 		}
 		else if (port.name == "login") {
 			var updateTokens = function(credCheck) {
