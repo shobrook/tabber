@@ -158,13 +158,20 @@ def update_user(mongo, request_json):
 
 # DELETING
 
+# TODO: Make this not horribly inefficient
 def delete_conversation(mongo, request_json):
-	if request_json["authToken"] in user["authToken"]:
-		return False
 	all_conversations = mongo.db.conversations.find()
 	for conversation in all_conversations:
-		if conversation["_id"] == request_json["conversation_id"]:
-			mongo.db.conversations.remove({"_id": conversation["_id"]})
+		if conversation["name"] == request_json["name"]:
+			mongo.db.conversations.remove(conversation["_id"])
+	return True
+
+# TODO: Make this not horribly inefficient
+def delete_folder(mongo, request_json):
+	all_folders = mongo.db.folders.find()
+	for folder in all_folders:
+		if folder["name"] == request_json["name"]:
+			mongo.db.folders.remove(folder["_id"])
 	return True
 
 
@@ -186,6 +193,8 @@ def validate_user(mongo, request_json):
 
 if __name__ == "__main__":
 
+	AUTH_ID = u'ya29.Glt4BMEBItrisrotpFBietmQsOv7vqifq1lnhyQB_C8SfBhzY_Pv7WRO89kndeOWIaiK9kEKwv1HwFYberSeyu7t8aG8VdDnJy4MnkFNq1RokZ8urlG-zKm4h42m'
+
 	import pprint
 	pp = pprint.PrettyPrinter(indent=2)
 
@@ -195,13 +204,17 @@ if __name__ == "__main__":
 	mongo = PyMongo(app)
 
 	with app.app_context():
-		# request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g'}
+		# request_json = {u'authToken': AUTH_ID}
 		# pp.pprint(get_all_content(mongo, request_json))
 
-		# request_json = {u'parent': 'root', u'name': 'New Folder', u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g'}
-		# pp.pprint(add_folder(mongo, request_json))
+		request_json = {u'parent': 'root', u'name': 'New Folder', u'authToken': AUTH_ID}
+		pp.pprint(add_folder(mongo, request_json))
 
-		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g', "name": "New Folder", "newName": "Renamed Folder"}
-		pp.pprint(rename_folder(mongo, request_json))
+		# request_json = {"name": "New Folder", "newName": "Renamed Folder", u'authToken': AUTH_ID}
+		# pp.pprint(rename_folder(mongo, request_json))
 
-		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g', "name": "New Folder", "newName": "Renamed Folder"}
+		# request_json = {"name": "Works for me", u'authToken': AUTH_ID}
+		# delete_conversation(mongo, request_json)
+
+		request_json = {"name": "New Folder", u'authToken': AUTH_ID}
+		delete_folder(mongo, request_json)
