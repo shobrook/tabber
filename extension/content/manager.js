@@ -6,6 +6,7 @@ injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
+deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
 
 /* MAIN */
 
@@ -250,10 +251,13 @@ var fileManager = function() {
 		var removeFolderButton = document.getElementById("tabberRemoveFolder");
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
+			// TODO: Send delete folder request to server
+			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText}}, '*');
+			console.log(this)
+			console.log(this.innerText)
+
 			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
 			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
-
-			// TODO: Send delete folder request to server
 		});
 
 
@@ -313,4 +317,6 @@ window.addEventListener('message', function(event) {
 		addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
 	if (event.data.type && event.data.type == "rename_folder")
 		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
+	if (event.data.type && event.data.type == "delete_folder")
+		deleteFolderPort.postMessage({name: event.data.text.name});
 });

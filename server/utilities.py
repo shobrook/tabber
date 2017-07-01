@@ -7,6 +7,10 @@ from flask_pymongo import PyMongo
 # GETTING
 
 def get_all_content_recursive(mongo, folder):
+
+	if folder is None:
+		return
+
 	# Gathers all conversations in the folder
 	conversation_list = []
 	all_conversations = mongo.db.conversations.find()
@@ -18,7 +22,13 @@ def get_all_content_recursive(mongo, folder):
 	children_list = []
 	for subfolder in folder["children"]:
 		# print("subfolder: " + str(subfolder))
-		children_list.append(get_all_content_recursive(mongo, mongo.db.folders.find_one({"_id": subfolder})))
+		subfolder_id = mongo.db.folders.find_one({"_id": subfolder})
+		# Folder was deleted; remove from parent
+		# TODO: Move this into delete_folder() functionality
+		if subfolder_id is None:
+			folder["children"].remove(subfolder)
+		else:
+			children_list.append(get_all_content_recursive(mongo, subfolder_id))
 
 	return {"name": folder["name"], "conversations": conversation_list, "children": children_list}
 
@@ -168,6 +178,7 @@ def delete_conversation(mongo, request_json):
 
 # TODO: Make this not horribly inefficient
 def delete_folder(mongo, request_json):
+	print request_json
 	all_folders = mongo.db.folders.find()
 	for folder in all_folders:
 		if folder["name"] == request_json["name"]:
