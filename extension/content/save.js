@@ -1,16 +1,18 @@
-////GLOBALS////
+/* GLOBALS */
 
-injected = false;
+var conversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "conversations"});
+injectedSaveConversation = false;
 
-////MAIN////
+/* MAIN */
 
 console.log("Initializing tabber.");
 window.localStorage.setItem('tabber-id', chrome.runtime.id);
 console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 
-var payload = function() {
-	var scrapeAllMessages = function() {
-		var scrapedMessages = []; // All loaded messages and their respective sender + coordinates, in chronological order
+var saveConversation = function() {
+	var scrapeLoadedMessages = function() {
+		var scrapedMessages = []; // All loaded messages and their respective author + coordinates, in chronological order
+		var recipient = document.getElementsByClassName("_3oh-")[1].textContent;
 
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
@@ -24,14 +26,12 @@ var payload = function() {
 
 							if (msgNode == undefined || msgNode == null) continue; // Detects if message is rich media content
 
-							var messageContents = msgNode.textContent;
-							var sender = 0; // 0 for sent, 1 for received
-							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)") {
-								sender = 1;
-							}
+							var author = 0; // 0 for sent, 1 for received
+							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)")
+								author = recipient;
 							var position = msgNode.getBoundingClientRect();
 
-							scrapedMessages.push({"sender": sender, "message": messageContents, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
+							scrapedMessages.push({"author": author, "message": msgNode.textContent, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
 						}
 					}
 				});
@@ -44,13 +44,12 @@ var payload = function() {
 
 	var selectMessages = function(callback) {
 		var region = {"initial": [], "final": []}; // Coordinate bounds of selection region
-		var messages = []; // All loaded messages including sender and coordinates
+		var messages = []; // All loaded messages including author and coordinates
 		var tabber_svg, tabber_mask, tabber_clip; // Masking animation shared variables
 
 		var initSVG = function() {
 			console.log("Initializing canvas.");
 
-			// NOTE: Change this to change where mask is placed
 			var mask_target = document.body;
 
 			var svg_defs = `<svg id="tabber_svg" width="100%" height="100%">
@@ -119,8 +118,8 @@ var payload = function() {
 
 		initSVG();
 
-		messages = scrapeAllMessages();
-		var selectedMessages = []; // Selected messages distinguished by sender (ordered chronologically)
+		messages = scrapeLoadedMessages();
+		var selectedMessages = []; // Selected messages distinguished by author (ordered chronologically)
 
 		// Filters messages through region bounds and append to selectedMessages
 		var filterMessages = function() {
@@ -129,26 +128,25 @@ var payload = function() {
 				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
 						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] < region.final[0] && region.initial[1] > region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
 						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] > region.final[0] && region.initial[1] > region.final[1]) {
 					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
 						(m.coordinates[1] <= region.initial[1] && m.coordinates[1] >= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				} else if (region.initial[0] > region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] <= region.initial[0] && m.coordinates[0] >= region.final[0]) &&
 						(m.coordinates[1] >= region.initial[1] && m.coordinates[1] <= region.final[1])) {
-						selectedMessages.push({"sender": m.sender, "message": m.message});
+						selectedMessages.push({"author": m.author, "message": m.message});
 					}
 				}
 			});
-
 			callback(selectedMessages);
 		}
 	}
@@ -158,7 +156,9 @@ var payload = function() {
 			console.log("JS injection received: " + event.data.text);
 
 			selectMessages(function(selectedMessages) {
-				// TODO: Pull folders with the most content from messages.json
+				// TODO: Implement an option to display an expanded file view
+
+				// HTML generator for the folder dropdown
 				var folderHTML = "";
 				event.data.contents.forEach(function(f) {
 					folderHTML += "<option> " + f + " </option> ";
@@ -166,16 +166,18 @@ var payload = function() {
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
-				var form_defs = `<form id="saveForm">
-									<label for="name"> Name: </label>
-				    			<input type="text" id="nameInput" name="name" value="` + selectedMessages[0].message + `" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
 
-				    			<label for="folder"> Folder: </label>
-				    			<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">` + folderHTML +
-
-									`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
-				    			<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
-				  			</form>`;
+				var formDefs = `<form id="saveForm">
+													<label for="name"> Name: </label>
+													<input type="text" id="nameInput" name="name" value="`
+														+ selectedMessages[0].message +
+													`" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
+													<label for="folder"> Folder: </label>
+													<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">`
+														+ folderHTML +
+													`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
+													<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
+												</form>`;
 
 				canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
 
@@ -187,35 +189,30 @@ var payload = function() {
 				saveDialog.style.borderRadius = "5px";
 				saveDialog.style.padding = "20px";
 				saveDialog.style.backgroundColor = "#FFFFFF";
-				//saveDialog.style.boxShadow = "0px 1px 4px #000000";
 				saveDialog.style.zIndex = "2147483647";
 
 				// HTML generator for selected messages preview
 				var messagePreview = "";
 				selectedMessages.forEach(function(m) {
-					if (m.sender == 1) messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.message + " </p>";
-					else messagePreview += "<p style='color: #2C9ED4; margin: 0;'> " + m.message + " </p>";
+					if (m.author == 0) messagePreview += "<p style='color: #2C9ED4; margin: 0;'> Me: " + m.message + " </p>";
+					else messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.author + ": " + m.message + " </p>";
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
 
-				saveDialog.innerHTML = messagePreview + form_defs;
+				saveDialog.innerHTML = messagePreview + formDefs;
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
 
-				console.log("Prompted saved dialog.");
+				console.log("Prompted dialog for saving conversations.");
 
 				var saveForm = document.getElementById("saveForm");
 				var cancelForm = document.getElementById("cancelButton");
 
-				saveForm.onsubmit = function() {
-					var name = document.getElementById("saveForm").name.value;
-					var folder = document.getElementById("saveForm").folder.value;
+				// TODO: Implement an onClick handler for an expanded folder view
 
-					// TODO: Detect whether user created new folder
-					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "newFolder": 0, "messages": selectedMessages}}, '*');
-
-					document.body.removeChild(saveDialog);
+				canvas.onclick = function() {
+					document.body.removeChild(signUpDialog);
 					document.body.removeChild(canvas);
 				}
 
@@ -223,33 +220,53 @@ var payload = function() {
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
+
+				saveForm.onsubmit = function() {
+					var name = (this).name.value;
+					var folder = (this).folder.value;
+
+					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
+					window.addEventListener('message', function(event) {
+						if (event.data.type == 'save-confirmation' && event.data.value) {
+							// TODO: Implement a sweet alert notification for successfully saved convos
+							document.body.removeChild(saveDialog);
+							document.body.removeChild(canvas);
+						}
+					})
+				}
 			});
 		}
 	});
 }
 
 // Prepares the JS injection
-var inject = function() {
+var injectSaveConversation = function() {
 	var script = document.createElement('script');
-	script.textContent = "(" + payload.toString() + ")();";
+	script.textContent = "(" + saveConversation.toString() + ")();";
 	document.head.appendChild(script);
 }
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.message == "clicked_browser_action" && !injected) {
+// Listens for browser action click
+chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
+	if (request.message == "clicked_browser_action" && !injectedSaveConversation) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
-		injected = true;
-		inject();
+		injectedSaveConversation = true;
+		injectSaveConversation();
 	}
 	if (request.message == "clicked_browser_action")
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
-// Opens long-lived connection b/w content and background
-var port = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "saved-messages"});
+// Passes conversation payload to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "dialog_input") {
 		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
-		port.postMessage({messages: {name: event.data.text.name, folder: event.data.text.folder, content: event.data.text.messages}});
+		conversationPort.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
 	}
+});
+
+// Receives "saved conversation" confirmation from background script
+conversationPort.onMessage.addListener(function(msg) {
+	if (msg.saved)
+		window.postMessage({type: 'save-confirmation', value: msg.saved}, '*');
 });

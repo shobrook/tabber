@@ -1,7 +1,22 @@
 {
-  "manifest_version": 2,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw2iW5bG8553OAK2WgrJ1UPkaUxVzESLdDW6Z/15+HTYgBt+sZ07sTAdF+119a7N7ZU8zJRTXEBg2aCWFEhkau2BK3fuWJlu/6zBDQ/xgXtZt6p6S0LCKTFsbuQDNMhS1CP00ltewcRPhrIdRAWjnHfh1GgLghL4QGgWOVHYKW0haZ5MbFq6bL04nNNMV0fPVq+bvUrH5nf96+Id9SUuvuCBDKpFIUYwk7dFNHvVEcLLEoSGlBZ+C/WVzVI/CDsl5bLgZ09GK2CSK1WP0ZbjUjlBOGgOrhZZ+3aWUhl4WFTLxChZQDCnXQ8yJ6DNbAGqNkr4kFhyJkVYI+6V178kE/QIDAQAB",
   "name": "tabber",
   "version": "0.1",
+  "manifest_version": 2,
+  "permissions": [
+    "contextMenus",
+    "http://localhost:5000/tabber/api/*",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "557897042954-o3obikdtoprmoungto84a0jkgum3cahv.apps.googleusercontent.com",
+    "scopes": ["profile", "openid", "email"]
+  },
+  "browser_action": {
+    "default_icon": "extension/assets/icon.png",
+    "default_title": "tabber"
+  },
+  "web_accessible_resources": [],
   "background": {
     "scripts": ["extension/background.js"]
   },
@@ -12,14 +27,6 @@
       "http://www.messenger.com/*",
       "https://www.messenger.com/*"
     ],
-    "js": ["extension/assets/jquery-3.2.1.min.js", "extension/content/save.js", "extension/content/manager.js"]
-  }],
-  "browser_action": {
-    "default_icon": "extension/assets/icon.png",
-    "default_title": "tabber"
-  },
-  "permissions": [
-    "contextMenus"
-  ],
-  "web_accessible_resources": []
+    "js": ["extension/assets/jquery-3.2.1.min.js", "extension/content/save.js", "extension/content/manager.js", "extension/content/register.js", "extension/content/onboarding.js"]
+  }]
 }
