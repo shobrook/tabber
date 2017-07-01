@@ -108,7 +108,7 @@ def rename_folder():
 # Renames the specified folder
 @app.route("/tabber/api/delete_folder", methods=["POST"])
 def delete_folder():
-	# Request: {"authToken": "...", "name": "..."}
+	# Request: {"authToken": "...", "name": "...", "parentName"}
 	if not request.json or not "authToken" in request.json:
 		abort(400, "delete_folder(): request.json does not exist or does not contain 'authToken'")
 

@@ -24,11 +24,7 @@ def get_all_content_recursive(mongo, folder):
 		# print("subfolder: " + str(subfolder))
 		subfolder_id = mongo.db.folders.find_one({"_id": subfolder})
 		# Folder was deleted; remove from parent
-		# TODO: Move this into delete_folder() functionality
-		if subfolder_id is None:
-			folder["children"].remove(subfolder)
-		else:
-			children_list.append(get_all_content_recursive(mongo, subfolder_id))
+		children_list.append(get_all_content_recursive(mongo, subfolder_id))
 
 	return {"name": folder["name"], "conversations": conversation_list, "children": children_list}
 
@@ -178,11 +174,17 @@ def delete_conversation(mongo, request_json):
 
 # TODO: Make this not horribly inefficient
 def delete_folder(mongo, request_json):
-	print request_json
 	all_folders = mongo.db.folders.find()
 	for folder in all_folders:
-		if folder["name"] == request_json["name"]:
-			mongo.db.folders.remove(folder["_id"])
+		if folder["name"] == request_json["parentName"]:
+			for subfolder_id in folder["children"]:
+				subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
+				if subfolder["name"] == request_json["name"]:
+					mongo.db.folders.remove(subfolder_id)
+					folder["children"].remove(subfolder_id)
+					# print("folder['_id']: " + str(folder["_id"]))
+					# print("subfolder_id: " + str(subfolder_id))
+					mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
 	return True
 
 
@@ -204,7 +206,7 @@ def validate_user(mongo, request_json):
 
 if __name__ == "__main__":
 
-	AUTH_ID = u'ya29.Glt4BMEBItrisrotpFBietmQsOv7vqifq1lnhyQB_C8SfBhzY_Pv7WRO89kndeOWIaiK9kEKwv1HwFYberSeyu7t8aG8VdDnJy4MnkFNq1RokZ8urlG-zKm4h42m'
+	AUTH_ID = u'ya29.Glx6BP2MHLV0xcegcsPzy378uZmJo4kgygGturW8jrGCC80ygI8BcxhezpQhAXFjd4pK6Z1sDdHWq8N1P04DSh2H1zOJ18uvLyNAX3u50fCEdPufK7R5eXIkiyUP7g'
 
 	import pprint
 	pp = pprint.PrettyPrinter(indent=2)
@@ -219,13 +221,13 @@ if __name__ == "__main__":
 		# pp.pprint(get_all_content(mongo, request_json))
 
 		request_json = {u'parent': 'root', u'name': 'New Folder', u'authToken': AUTH_ID}
-		pp.pprint(add_folder(mongo, request_json))
+		print("Added folder: " + add_folder(mongo, request_json))
 
 		# request_json = {"name": "New Folder", "newName": "Renamed Folder", u'authToken': AUTH_ID}
-		# pp.pprint(rename_folder(mongo, request_json))
+		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)
 
 		# request_json = {"name": "Works for me", u'authToken': AUTH_ID}
-		# delete_conversation(mongo, request_json)
+		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
 
-		request_json = {"name": "New Folder", u'authToken': AUTH_ID}
-		delete_folder(mongo, request_json)
+		request_json = {"name": "New Folder", "parentName": "root", u'authToken': AUTH_ID}
+		print("Removed folder status: " + str(delete_folder(mongo, request_json)))

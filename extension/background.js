@@ -200,7 +200,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) deleted.");
 				}
-				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name}, deletedFolder);
+				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parentName": msg.parentName}, deletedFolder);
 			});
 		}
 		else if (port.name == "onboarding") {

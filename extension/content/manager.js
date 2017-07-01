@@ -252,9 +252,7 @@ var fileManager = function() {
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
 			// TODO: Send delete folder request to server
-			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText}}, '*');
-			console.log(this)
-			console.log(this.innerText)
+			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parentName: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 
 			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
 			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
@@ -318,5 +316,5 @@ window.addEventListener('message', function(event) {
 	if (event.data.type && event.data.type == "rename_folder")
 		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
 	if (event.data.type && event.data.type == "delete_folder")
-		deleteFolderPort.postMessage({name: event.data.text.name});
+		deleteFolderPort.postMessage({name: event.data.text.name, parentName: event.data.text.parentName});
 });

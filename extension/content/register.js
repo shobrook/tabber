@@ -256,14 +256,17 @@ var registerPayload = function() {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully registered.");
-		} else if (event.data.type == "signUpValidation" && !(event.data.value)) {
+		}
+		else if (event.data.type == "signUpValidation" && !(event.data.value)) {
 			signUpForm.reset();
 			console.log("User tried signing up with invalid email.");
-		} else if (event.data.type == "loginValidation" && event.data.value) {
+		}
+		else if (event.data.type == "loginValidation" && event.data.value) {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully logged in.");
-		} else if (event.data.type == "loginValidation" && !(event.data.value)) {
+		}
+		else if (event.data.type == "loginValidation" && !(event.data.value)) {
 			signUpForm.reset();
 			console.log("User inputted incorrect login credentials.");
 		}
