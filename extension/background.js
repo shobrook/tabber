@@ -203,6 +203,9 @@ chrome.runtime.onConnect.addListener(function(port) {
 				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parentName": msg.parentName}, deletedFolder);
 			});
 		}
+		else if (port.name == "invite-friend") {
+			console.log("User wants to invite a friend");
+		}
 		else if (port.name == "onboarding") {
 			if (msg.submitted)
 				onboarding = false;

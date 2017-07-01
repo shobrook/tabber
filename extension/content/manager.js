@@ -7,6 +7,7 @@ getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabbe
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
 deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
+inviteFriendPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "invite-friend"});
 
 /* MAIN */
 
@@ -152,7 +153,13 @@ var fileManager = function() {
 		fileManager.style.backgroundColor = "#FFFFFF";
 		fileManager.style.zIndex = "2147483647";
 
-		var currentFolderView = "<div style='height: 50px;'><input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'><input type='button' id='tabberAddFolder' value='+'><input type='button' id='tabberRenameFolder' value='/'><input type='button' id='tabberRemoveFolder' value='i'></div>";
+		var currentFolderView = "<div style='height: 50px;'>\
+									<input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'>\
+									<input type='button' id='tabberAddFolder' value='+'>\
+									<input type='button' id='tabberRenameFolder' value='/'>\
+									<input type='button' id='tabberRemoveFolder' value='-'>\
+									<input type='button' id='tabberInviteFriends' value='i'>\
+								</div>";
 		var folderTreeView = getFolderTreeView(folderList);
 		var conversationView = "<div id='conversationDisplay' style='overflow-y: auto; height: 200px; border: 1px solid #333;'></div>";
 
@@ -251,11 +258,20 @@ var fileManager = function() {
 		var removeFolderButton = document.getElementById("tabberRemoveFolder");
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
-			// TODO: Send delete folder request to server
+			// Sends delete folder request to server
 			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parentName: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 
 			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
 			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
+		});
+
+		// Opens the referral dialog
+		// TODO: The referral dialog
+		var inviteFriendButton = document.getElementById("tabberInviteFriends");
+		inviteFriendButton.addEventListener("click", function() {
+			console.log("Opening referral dialog");
+			// Sends request to open the referral dialog to the background script
+			window.postMessage({type: "invite_friend", text: {}}, '*');
 		});
 
 
@@ -317,4 +333,6 @@ window.addEventListener('message', function(event) {
 		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
 	if (event.data.type && event.data.type == "delete_folder")
 		deleteFolderPort.postMessage({name: event.data.text.name, parentName: event.data.text.parentName});
+	if (event.data.type && event.data.type == "invite_friend")
+		inviteFriendPort.postMessage();
 });
