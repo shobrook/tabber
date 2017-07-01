@@ -156,6 +156,17 @@ def update_user(mongo, request_json):
 	return True
 
 
+# DELETING
+
+def delete_conversation(mongo, request_json):
+	if request_json["authToken"] in user["authToken"]:
+		return False
+	all_conversations = mongo.db.conversations.find()
+	for conversation in all_conversations:
+		if conversation["_id"] == request_json["conversation_id"]:
+			mongo.db.conversations.remove({"_id": conversation["_id"]})
+	return True
+
 
 # MISCELLANIOUS
 
@@ -192,3 +203,5 @@ if __name__ == "__main__":
 
 		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g', "name": "New Folder", "newName": "Renamed Folder"}
 		pp.pprint(rename_folder(mongo, request_json))
+
+		request_json = {u'authToken': u'ya29.GlxvBDhyqdSqjKZTF9nI-eqm7x0nMl3Fj7_UNZ3hlhWxkRL0JyzQFT8nx_ZDZqJaWJMEGoU8dR2kEw5TcJoxMyiPe8rqu5C3sqnCchzV4jOaJvlpK0cakcGLDjWD9g', "name": "New Folder", "newName": "Renamed Folder"}
