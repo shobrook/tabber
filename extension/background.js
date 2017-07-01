@@ -1,4 +1,4 @@
-// TODO: Set up the content script for Invite a Friend
+// TODO: Don't prompt signup dialog after login
 
 /* GLOBALS */
 
@@ -78,7 +78,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 
 // Creates "Find Messages" in context menu and prompts file manager
 chrome.contextMenus.create({
-	title: "Find Messages",
+	title: "Open Tabber",
 	contexts: ["browser_action"],
 	onclick: function () {
 		if (!signup) {
@@ -141,6 +141,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 						else if (!(JSON.parse(device).updated))
 							console.log("User is logging in via a known device.");
 						port.postMessage({loggedIn: true});
+						signup = false;
 					}
 					POST(UPDATE_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, deviceCheck);
 				} else if (!(JSON.parse(credCheck).valid)) {
@@ -197,11 +198,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 				onboarding = false;
 			else if (!(msg.submitted))
 				onboarding = true;
-		} else if (port.name == "registered") {
-			if (msg.registered)
-				signup = true;
-			else if (!(msg.registered))
-				signup = false;
 		}
 	});
 });
