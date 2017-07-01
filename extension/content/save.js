@@ -12,6 +12,7 @@ console.log("Extension ID: " + window.localStorage.getItem('tabber-id'));
 var saveConversation = function() {
 	var scrapeLoadedMessages = function() {
 		var scrapedMessages = []; // All loaded messages and their respective author + coordinates, in chronological order
+		var recipient = document.getElementsByClassName("_3oh-")[1].textContent;
 
 		var containerNode = document.getElementsByClassName('__i_')[0];
 		containerNode.childNodes.forEach(function(child) {
@@ -27,7 +28,7 @@ var saveConversation = function() {
 
 							var author = 0; // 0 for sent, 1 for received
 							if (window.getComputedStyle(msgWrapperNodes[i].childNodes[0], null).getPropertyValue("background-color") == "rgb(241, 240, 240)")
-								author = 1;
+								author = recipient;
 							var position = msgNode.getBoundingClientRect();
 
 							scrapedMessages.push({"author": author, "message": msgNode.textContent, "coordinates": [position.left + window.pageXOffset, position.top + window.pageYOffset]});
@@ -193,8 +194,8 @@ var saveConversation = function() {
 				// HTML generator for selected messages preview
 				var messagePreview = "";
 				selectedMessages.forEach(function(m) {
-					if (m.author == 1) messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.message + " </p>";
-					else messagePreview += "<p style='color: #2C9ED4; margin: 0;'> " + m.message + " </p>";
+					if (m.author == 0) messagePreview += "<p style='color: #2C9ED4; margin: 0;'> Me: " + m.message + " </p>";
+					else messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.author + ": " + m.message + " </p>";
 				});
 				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
 
