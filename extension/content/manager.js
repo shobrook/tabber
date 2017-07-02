@@ -259,7 +259,7 @@ var fileManager = function() {
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
 			// Sends delete folder request to server
-			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parentName: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
+			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 
 			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
 			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
@@ -325,14 +325,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "get_conversations")
-		getConversationsPort.postMessage();
-	if (event.data.type && event.data.type == "add_folder")
-		addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
-	if (event.data.type && event.data.type == "rename_folder")
-		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
-	if (event.data.type && event.data.type == "delete_folder")
-		deleteFolderPort.postMessage({name: event.data.text.name, parentName: event.data.text.parentName});
-	if (event.data.type && event.data.type == "invite_friend")
-		inviteFriendPort.postMessage();
+	if (!event.data.type) {
+		// console.log("Server message was not for tabber or not specified");
+		return;
+	}
+	if (event.data.type == "get_conversations") getConversationsPort.postMessage();
+	else if (event.data.type == "add_folder") addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
+	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
+	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({name: event.data.text.name, parent: event.data.text.parent});
+	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
+	else console.log("Invalid tabber server message");
 });

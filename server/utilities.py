@@ -13,17 +13,14 @@ def get_all_content_recursive(mongo, folder):
 
 	# Gathers all conversations in the folder
 	conversation_list = []
-	all_conversations = mongo.db.conversations.find()
-	for conversation in all_conversations:
-		if conversation["_id"] in folder["conversations"]:
-			conversation_list.append({"name": conversation["name"], "messages": conversation["messages"]})
+	for conversation_id in folder["conversations"]:
+		conversation = mongo.db.conversations.find_one({"_id": conversation_id})
+		conversation_list.append({"name": conversation["name"], "messages": conversation["messages"]})
 
 	# Recursively traverses subfolders
 	children_list = []
 	for subfolder in folder["children"]:
-		# print("subfolder: " + str(subfolder))
 		subfolder_id = mongo.db.folders.find_one({"_id": subfolder})
-		# Folder was deleted; remove from parent
 		children_list.append(get_all_content_recursive(mongo, subfolder_id))
 
 	return {"name": folder["name"], "conversations": conversation_list, "children": children_list}
@@ -43,11 +40,10 @@ def get_all_content(mongo, request_json):
 
 def get_folders(mongo, request_json):
 	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
-	output = []
-	for f in mongo.db.folders.find():
-		if f["user_id"] == ObjectId(str(user["_id"])):
-			output.append(f["name"])
-	return output
+	folder_name_list = []
+	for folder in mongo.db.folders.find({"user_id": user["_id"]}):
+		folder_name_list.append(folder["name"])
+	return folder_name_list
 
 def get_database(mongo):
 	users = []
@@ -137,6 +133,7 @@ def add_conversation(mongo, request_json):
 	return str(convo_id)
 
 
+
 # EDITING
 
 def rename_folder(mongo, request_json):
@@ -155,50 +152,48 @@ def update_user(mongo, request_json):
 		return False
 	else:
 		mongo.db.users.update_one({
-			"email": request_json["email"],
-			"password": request_json["password"]},
+			"_id": ObjectId(str(user["_id"]))},
 			{"$push": {"authToken": request_json["authToken"]}
 		}, True)
 	return True
+
 
 
 # DELETING
 
 # TODO: Make this not horribly inefficient
 def delete_conversation(mongo, request_json):
-	all_conversations = mongo.db.conversations.find()
-	for conversation in all_conversations:
+	for conversation in mongo.db.conversations.find():
 		if conversation["name"] == request_json["name"]:
 			mongo.db.conversations.remove(conversation["_id"])
 	return True
 
 # TODO: Make this not horribly inefficient
+# TODO: Fix duplicate parent-child bug
 def delete_folder(mongo, request_json):
-	all_folders = mongo.db.folders.find()
-	for folder in all_folders:
-		if folder["name"] == request_json["parentName"]:
-			for subfolder_id in folder["children"]:
-				subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
-				if subfolder["name"] == request_json["name"]:
-					mongo.db.folders.remove(subfolder_id)
-					folder["children"].remove(subfolder_id)
-					# print("folder['_id']: " + str(folder["_id"]))
-					# print("subfolder_id: " + str(subfolder_id))
-					mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
+	for folder in mongo.db.folders.find({"name": request_json["parent"]}):
+		for subfolder_id in folder["children"]:
+			subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
+			if subfolder["name"] == request_json["name"]:
+				mongo.db.folders.remove(subfolder_id)
+				folder["children"].remove(subfolder_id)
+				# print("folder['_id']: " + str(folder["_id"]))
+				# print("subfolder_id: " + str(subfolder_id))
+				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
+				return
 	return True
+
 
 
 # MISCELLANIOUS
 
 def validate_user(mongo, request_json):
 	if not "password" in request_json:
-		for u in mongo.db.users.find():
-			if u["email"] == request_json["email"]:
+		if mongo.db.users.find({"email": request_json["email"]}) != []:
 				return False
 		return True
 
-	for u in mongo.db.users.find():
-		if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
+	if mongo.db.users.find({"email": request_json["email"], "password": request.json["password"]}) != []:
 			return True
 	return False
 
@@ -229,5 +224,5 @@ if __name__ == "__main__":
 		# request_json = {"name": "Works for me", u'authToken': AUTH_ID}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
 
-		request_json = {"name": "New Folder", "parentName": "root", u'authToken': AUTH_ID}
+		request_json = {"name": "New Folder", "parent": "root", u'authToken': AUTH_ID}
 		print("Removed folder status: " + str(delete_folder(mongo, request_json)))

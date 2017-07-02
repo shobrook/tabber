@@ -98,7 +98,7 @@ chrome.contextMenus.create({
 });
 
 // Creates "Sign In" in context menu and prompts file manager
-// TODO: Eventually changed this to "Log In" once we have a separate login dialog
+// TODO: Eventually change this to "Log In" once we have a separate login dialog
 chrome.contextMenus.create({
 	title: "Sign Up",
 	contexts: ["browser_action"],
@@ -200,23 +200,17 @@ chrome.runtime.onConnect.addListener(function(port) {
 					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) deleted.");
 				}
-				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parentName": msg.parentName}, deletedFolder);
+				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parent": msg.parent}, deletedFolder);
 			});
 		}
 		else if (port.name == "invite-friend") {
 			console.log("User wants to invite a friend");
 		}
 		else if (port.name == "onboarding") {
-			if (msg.submitted)
-				onboarding = false;
-			else if (!(msg.submitted))
-				onboarding = true;
+			onboarding = msg.submitted ? true : false
 		}
 		else if (port.name == "registered") {
-			if (msg.registered)
-				signup = true;
-			else if (!(msg.registered))
-				signup = false;
+			signup = msg.registered ? true : false
 		}
 	});
 });

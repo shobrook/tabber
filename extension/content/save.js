@@ -266,6 +266,5 @@ window.addEventListener('message', function(event) {
 
 // Receives "saved conversation" confirmation from background script
 conversationPort.onMessage.addListener(function(msg) {
-	if (msg.saved)
-		window.postMessage({type: 'save-confirmation', value: msg.saved}, '*');
+	if (msg.saved) window.postMessage({type: 'save-confirmation', value: msg.saved}, '*');
 });
