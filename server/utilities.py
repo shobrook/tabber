@@ -102,6 +102,7 @@ def add_user(mongo, request_json):
 	return True;
 
 # Adds folder under a specified parent folder
+# TODO: Check that we don't add duplicate folders
 def add_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 
@@ -148,7 +149,6 @@ def delete_conversation(mongo, request_json):
 
 # TODO: Make this not horribly inefficient
 # TODO: Fix duplicate parent-child bug
-# TODO: Stop user from "deleting" root folder in front-end
 def delete_folder(mongo, request_json):
 	for folder in mongo.db.folders.find({"name": request_json["parent"]}):
 		for subfolder_id in folder["children"]:
