@@ -154,6 +154,5 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "submit")
-		onboardingPort.postMessage({submitted: event.data.submitted});
+	if (event.data.type && event.data.type == "submit") onboardingPort.postMessage({submitted: event.data.submitted});
 });

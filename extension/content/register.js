@@ -247,7 +247,7 @@ var registerPayload = function() {
 		var email = (this).tabberEmail.value;
 		var password = (this).tabberPass.value;
 
-		console.log(email + " " + password);
+		// console.log(email + " " + password);
 		window.postMessage({type: "login_credentials", text: {"email": email, "password": password}}, '*');
 	}
 
@@ -256,15 +256,18 @@ var registerPayload = function() {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully registered.");
-		} else if (event.data.type == "signUpValidation" && !(event.data.value)) {
+		}
+		else if (event.data.type == "signUpValidation" && !(event.data.value)) {
 			// TODO: Append a red alert message
 			signUpForm.reset();
 			console.log("User tried signing up with invalid email.");
-		} else if (event.data.type == "loginValidation" && event.data.value) {
+		}
+		else if (event.data.type == "loginValidation" && event.data.value) {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully logged in.");
-		} else if (event.data.type == "loginValidation" && !(event.data.value)) {
+		} 
+    else if (event.data.type == "loginValidation" && !(event.data.value)) {
 			// TODO: Append a red alert message
 			signUpForm.reset();
 			console.log("User inputted incorrect login credentials.");
@@ -291,21 +294,16 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
-	if (event.data.type == "signup_credentials")
-		registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
-	else if (event.data.type == "login_credentials")
-		loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
-	else if (event.data.type == "registered")
-		onboardingPort.postMessage({registered: event.data.value});
+	if (event.data.type == "signup_credentials") registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
+	else if (event.data.type == "login_credentials") loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
+	else if (event.data.type == "registered") onboardingPort.postMessage({registered: event.data.value});
 });
 
 // Background script --> here --> injected JS
 registerPort.onMessage.addListener(function(msg) {
-	if (msg.registered == true || msg.registered == false)
-		window.postMessage({type: "signUpValidation", value: msg.registered}, '*');
+	if (msg.registered == true || msg.registered == false) window.postMessage({type: "signUpValidation", value: msg.registered}, '*');
 });
 
 loginPort.onMessage.addListener(function(msg) {
-	if (msg.loggedIn)
-		window.postMessage({type: "loginValidation", value: msg.loggedIn}, '*');
+	if (msg.loggedIn) window.postMessage({type: "loginValidation", value: msg.loggedIn}, '*');
 });

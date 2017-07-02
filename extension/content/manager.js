@@ -6,6 +6,8 @@ injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
+deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
+inviteFriendPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "invite-friend"});
 
 /* MAIN */
 
@@ -151,7 +153,13 @@ var fileManager = function() {
 		fileManager.style.backgroundColor = "#FFFFFF";
 		fileManager.style.zIndex = "2147483647";
 
-		var currentFolderView = "<div style='height: 50px;'><input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'><input type='button' id='tabberAddFolder' value='+'><input type='button' id='tabberRenameFolder' value='/'><input type='button' id='tabberRemoveFolder' value='i'></div>";
+		var currentFolderView = "<div style='height: 50px;'>\
+									<input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'>\
+									<input type='button' id='tabberAddFolder' value='+'>\
+									<input type='button' id='tabberRenameFolder' value='/'>\
+									<input type='button' id='tabberRemoveFolder' value='-'>\
+									<input type='button' id='tabberInviteFriends' value='i'>\
+								</div>";
 		var folderTreeView = getFolderTreeView(folderList);
 		var conversationView = "<div id='conversationDisplay' style='overflow-y: auto; height: 200px; border: 1px solid #333;'></div>";
 
@@ -181,13 +189,7 @@ var fileManager = function() {
 		addFolderButton.addEventListener("click", function() {
 			currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
 
-			// Traverse until just before first conversation (currently we append to end instead)
 			// NOTE: Each conversation / folder has 2 corresponding elements: the <li> and the <ul> following it
-			// var i;
-			// for (i = 0; i < currentFolderChildren.length; i += 2) {
-			// 	// First folder is detected; break
-			// 	if (currentFolderChildren[i].classList.contains("tabberConversation")) break;
-			// }
 
 			// New folder <li>
 			var newFolder = document.createElement("li");
@@ -198,6 +200,15 @@ var fileManager = function() {
 			var parentName = CUR_SELECTED.innerHTML;
 			newFolder.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
+					// Prevents duplicate folder names in the same parent folder
+					var duplicate = false;
+					for (var i = 0; i < CUR_SELECTED.nextSibling.childNodes.length; i++) {
+						console.log(CUR_SELECTED.nextSibling.childNodes[i]);
+						if (CUR_SELECTED.nextSibling.childNodes[i].innerText == this.innerText) {
+							console.log("Duplicate folder found. Cannot create folder.");
+							return;
+						}
+					}
 					this.contentEditable = false;
 					window.postMessage({type: "add_folder", text: {name: this.innerText, parent: parentName}}, '*');
 					console.log("Added folder to database");
@@ -250,10 +261,20 @@ var fileManager = function() {
 		var removeFolderButton = document.getElementById("tabberRemoveFolder");
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
+			// Sends delete folder request to server
+			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
+
 			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
 			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
+		});
 
-			// TODO: Send delete folder request to server
+		// Opens the referral dialog
+		// TODO: The referral dialog
+		var inviteFriendButton = document.getElementById("tabberInviteFriends");
+		inviteFriendButton.addEventListener("click", function() {
+			console.log("Opening referral dialog");
+			// Sends request to open the referral dialog to the background script
+			window.postMessage({type: "invite_friend", text: {}}, '*');
 		});
 
 
@@ -307,10 +328,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Injected JS --> here --> background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "get_conversations")
-		getConversationsPort.postMessage();
-	if (event.data.type && event.data.type == "add_folder")
-		addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
-	if (event.data.type && event.data.type == "rename_folder")
-		renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
+	if (!event.data.type) {
+		// console.log("Server message was not for tabber or not specified");
+		return;
+	}
+	if (event.data.type == "get_conversations") getConversationsPort.postMessage();
+	else if (event.data.type == "add_folder") addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
+	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
+	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({name: event.data.text.name, parent: event.data.text.parent});
+	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
+	else console.log("Invalid tabber server message");
 });

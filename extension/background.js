@@ -22,6 +22,7 @@ const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
 const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
 const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
+const DELETE_FOLDER = "http://localhost:5000/tabber/api/delete_folder";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -38,7 +39,7 @@ var POST = function(url, payload, callback) {
 // Boolean for whether onboarding should be initiated
 var onboarding;
 // Boolean for whether signup should be initiated
-var signup = true; // NOTE: Set as "true" for testing only
+var signup = false; // NOTE: Set as "true" for testing only
 
 /* MAIN */
 
@@ -97,7 +98,7 @@ chrome.contextMenus.create({
 });
 
 // Creates "Sign In" in context menu and prompts file manager
-// TODO: Eventually changed this to "Log In" once we have a separate login dialog
+// TODO: Eventually change this to "Log In" once we have a separate login dialog
 chrome.contextMenus.create({
 	title: "Sign Up",
 	contexts: ["browser_action"],
@@ -192,11 +193,24 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(RENAME_FOLDER, {"authToken": oauth, "name": msg.name, "newName": msg.newName}, renamedFolder);
 			});
-		} else if (port.name == "onboarding") {
-			if (msg.submitted)
-				onboarding = false;
-			else if (!(msg.submitted))
-				onboarding = true;
+		}
+		else if (port.name == "delete-folder") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var deletedFolder = function() {
+					// TODO: Send confirmation to the content scripts
+					console.log("Folder was (supposedly) deleted.");
+				}
+				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parent": msg.parent}, deletedFolder);
+			});
+		}
+		else if (port.name == "invite-friend") {
+			console.log("User wants to invite a friend");
+		}
+		else if (port.name == "onboarding") {
+			onboarding = msg.submitted ? true : false
+		}
+		else if (port.name == "registered") {
+			signup = msg.registered ? true : false
 		}
 	});
 });
