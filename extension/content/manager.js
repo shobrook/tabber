@@ -194,7 +194,6 @@ var fileManager = function() {
 
 			// New folder <li>
 			var newFolder = document.createElement("li");
-			newFolder.classList.add("tabberFolder");
 			newFolder.innerHTML = "New Folder";
 			newFolder.style.color = "#7B7F84";
 			newFolder.contentEditable = "true";
@@ -203,13 +202,18 @@ var fileManager = function() {
 				if (e.key == "Enter") {
 					// Prevents duplicate folder names in the same parent folder
 					var duplicate = false;
-					for (var i = 0; i < CUR_SELECTED.nextSibling.childNodes.length; i++) {
-						console.log(CUR_SELECTED.nextSibling.childNodes[i]);
-						if (CUR_SELECTED.nextSibling.childNodes[i].innerText == this.innerText) {
+					// console.log(this.innerText);
+					for (var i = 0; i < currentFolderChildren.length; i++) {
+						// console.log(currentFolderChildren[i].innerText);
+						if (currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
 							console.log("Duplicate folder found. Cannot create folder.");
+							alert("There's already a folder inside " + parentName + " with that same name!");
+							e.preventDefault();
 							return;
 						}
 					}
+					// NOTE: We add the class here, otherwise it would detect itself as a duplicate
+					newFolder.classList.add("tabberFolder");
 					this.contentEditable = false;
 					window.postMessage({type: "add_folder", text: {name: this.innerText, parent: parentName}}, '*');
 					console.log("Added folder to database");
@@ -244,7 +248,7 @@ var fileManager = function() {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
 					window.postMessage({type: "rename_folder", text: {name: oldName, newName: this.innerText}}, '*');
-					console.log("Renamed folder in database")
+					console.log("Renamed folder in database");
 				}
 			})
 
@@ -267,12 +271,12 @@ var fileManager = function() {
 
 			// Don't delete the root folder
 			if (CUR_SELECTED.classList.contains("tabberRootFolder")) {
-				alert("You can't delete that folder!")
+				alert("You can't delete that folder!");
 				return;
 			}
 
-			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
-			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
+			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED.nextSibling); // Removes ul
+			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED); // Removes li
 		});
 
 		// Opens the referral dialog
