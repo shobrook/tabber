@@ -160,26 +160,56 @@ var saveConversation = function() {
 
 				// HTML generator for the folder dropdown
 				var folderHTML = "";
+				var count = 0;
 				event.data.contents.forEach(function(f) {
-					folderHTML += "<option> " + f + " </option> ";
+					if (count == 0)
+						folderHTML += "<input class='selectOption' type='radio' id='opt" + count + "' checked><label for='opt" + count + "' class='folderOption'>" + f + "</label>"
+					else
+						folderHTML += "<input class='selectOption' type='radio' id='opt" + count + "'><label for='opt" + count + "' class='folderOption'>" + f + "</label>"
+					count++;
+				});
+
+				// HTML generator for selected messages preview
+				var messagePreview = "";
+				selectedMessages.forEach(function(m) {
+					if (m.author == 0) messagePreview += "<p class='messageLines' style='color: #2C9ED4; margin: 0;'><strong>Me:</strong> " + m.message + " </p>";
+					else messagePreview += "<p class='messageLines' style='color: #7B7F84; margin: 0;'><strong>" + m.author + ":</strong> " + m.message + " </p>";
 				});
 
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
 
-				var formDefs = `<form id="saveForm">
-													<label for="name"> Name: </label>
-													<input type="text" id="nameInput" name="name" value="`
-														+ selectedMessages[0].message +
-													`" autofocus="autofocus" onclick="this.select()" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">
-													<label for="folder"> Folder: </label>
-													<select id="folderInput" name="folder" style="width: 100%; padding: 12px 15px; margin: 8px 0; display: inline-block; border: 1px solid #CCC; border-radius: 4px; box-sizing: border-box;">`
-														+ folderHTML +
-													`<input type="submit" value="Save" style="width: 100%; background-color: #2C9ED4; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer;">
-													<input id="cancelButton" type="button" value="Cancel" style="width: 100%; background-color: #FFF; color: #2C9ED4; padding: 14px 20px; margin: 8px 0; border-style: solid; border-color: #2C9ED4; border-radius: 4px; cursor: pointer;">
-												</form>`;
+				var formDefs = `<div id="saveConvoWrapper" style="margin: auto;">
+										      <div class="convoWrapper">
+										        <div id="convoPreview">` +
+															messagePreview +
+										        `</div><!--#convoPreview-->
+										      </div><!--.convoWrapper-->
 
-				canvas.style = "background-color: rgba(0,0,0,.35); z-index: 2147483647; width: 100%; height: 100%; top: 0px; left: 0px; display: block; position: absolute;";
+										      <hr id="convoDivisor">
+
+										      <div id="saveContent">
+										          <form id="saveForm">
+										            <input type="text" class="saveInputFields" id="convoName" autocomplete="off" placeholder="Conversation Name">
+										            <div class="selectFolders" tabindex="1">` +
+																	folderHTML +
+										            `</div>
+										            <input id="saveConvoButton" class="saveConvoButton" type="submit" value="Save">
+										            <div id="cancelSaveConvo">
+										              <p>Cancel</p>
+										            </div>
+										          </form><!--#saveForm-->
+										      </div><!--#saveContent-->
+										    </div><!--#saveConvoWrapper-->`;
+
+				canvas.style.backgroundColor = "rgba(0,0,0,.35)";
+				canvas.style.zIndex = "2147483647";
+				canvas.style.width = "100%";
+				canvas.style.height = "100%";
+			  canvas.style.top = "0px";
+				canvas.style.left = "0px";
+				canvas.style.display = "block";
+				canvas.style.position = "absolute";
 
 				saveDialog.style.position = "fixed";
 				saveDialog.style.width = "50%";
@@ -191,15 +221,189 @@ var saveConversation = function() {
 				saveDialog.style.backgroundColor = "#FFFFFF";
 				saveDialog.style.zIndex = "2147483647";
 
-				// HTML generator for selected messages preview
-				var messagePreview = "";
-				selectedMessages.forEach(function(m) {
-					if (m.author == 0) messagePreview += "<p style='color: #2C9ED4; margin: 0;'> Me: " + m.message + " </p>";
-					else messagePreview += "<p style='color: #7B7F84; margin: 0;'> " + m.author + ": " + m.message + " </p>";
-				});
-				messagePreview = "<div style='overflow-y: scroll; height: 100px;'> " + messagePreview + " </div>";
+				saveDialog.innerHTML = formDefs;
 
-				saveDialog.innerHTML = messagePreview + formDefs;
+				// TODO: Slim down and reorganized all of this CSS
+				document.getElementsByTagName('style')[0].innerHTML = `.convoWrapper {
+																															  overflow: hidden;
+																															  height: 145px;
+																															  width: 478px;
+																															  font-family: Helvetica;
+																															  font-size: 13px;
+																															  margin-left: 40px;
+																															}
+
+																															#convoPreview {
+																															  height: 87px;
+																															  margin-top: 30px;
+																															  overflow-y: scroll;
+																															}
+
+																															#convoDivisor {
+																															  background-color: #F5F7F9;
+																															  height: 1px;
+																															  border: none;
+																															  margin-top: -3px;
+																															}
+
+																															#saveContent {
+																															  position: relative;
+																															  top: 30px;
+																															  left: 40px;
+																															}
+
+																															.saveInputFields {
+																															  box-sizing: border-box;
+																															  width: 478px;
+																															  padding: 14px 20px;
+																															  outline: none;
+																															  display: inline-block;
+																															  margin: 0 0 15px 0;
+																															  border: none;
+																															  border-radius: 1px;
+																															  box-shadow: 0px 1px 3px #D9D9D9;
+																															  color: #7D858E;
+																															  font-family: Helvetica;
+																															  font-weight: 400;
+																															  font-size: 13px;
+																															}
+
+																															#convoName::-webkit-input-placeholder {
+																															  color: #CDD8E6;
+																															}
+
+																															.saveConvoButton {
+																															  position: relative;
+																															  background-color: #2C9ED4;
+																															  text-align: center;
+																															  width: 135px;
+																															  height: 42px;
+																															  border: none;
+																															  color: #FFFFFF;
+																															  font-family: Helvetica;
+																															  font-weight: 600;
+																															  font-size: 13px;
+																															  cursor: pointer;
+																															  border-radius: 10px 1px 10px 1px;
+																															  margin-left: 343px;
+																															  margin-top: 0px;
+																															  float: left;
+																															  overflow: hidden;
+																															  display: inline-block;
+																															  border: none;
+																															  outline: none;
+																															}
+
+																															.saveConvoButton:hover {
+																															  background-color: rgb(101,184,203);
+																															}
+
+																															.selectFolders {
+																															  display: flex;
+																															  flex-direction: column;
+																															  position: relative;
+																															  width: 478px;
+																															  height: 42px;
+																															  outline: none;
+																															  cursor: pointer;
+																															  color: #7D848E;
+																															  box-shadow: 0px 1px 3px #D9D9D9;
+																															  border-radius: 1px;
+																															  margin: 0 0 15px 0;
+																															}
+
+																															.folderOption {
+																															  padding: 0 30px 0 20px;
+																															  min-height: 42px;
+																															  display: flex;
+																															  align-items: center;
+																															  background-color: #FFF;
+																															  border-top: #F5F7F9 solid 1px;
+																															  position: absolute;
+																															  top: 0;
+																															  width: 100%;
+																															  pointer-events: none;
+																															  order: 2;
+																															  z-index: 1;
+																															  transition: background 0s ease-in-out;
+																															  box-sizing: border-box;
+																															  overflow: hidden;
+																															  white-space: nowrap;
+																															  font-family: Helvetica;
+																															  font-size: 13px;
+																															  cursor: pointer;
+																															}
+
+																															.folderOption:hover {
+																															  background: rgb(44,158,212);
+																															  color: #FFF;
+																															}
+
+																															.selectFolders:focus .folderOption {
+																															  position: relative;
+																															  pointer-events: all;
+																															}
+
+																															.selectOption {
+																															  opacity: 0;
+																															  position: absolute;
+																															  left: -99999px;
+																															}
+
+																															.selectOption:checked + .folderOption {
+																															  order: 1;
+																															  z-index: 2;
+																															  background: #FFF;
+																															  border-top: none;
+																															  position: relative;
+																															}
+
+																															.selectOption:checked + .folderOption:after {
+																															  content: '';
+																															  width: 0;
+																																height: 0;
+																																border-left: 5px solid transparent;
+																																border-right: 5px solid transparent;
+																																border-top: 5px solid #7D848E;
+																															  position: absolute;
+																															  right: 10px;
+																															  top: calc(50% - 2.5px);
+																															  pointer-events: none;
+																															  z-index: 3;
+																															}
+
+																															.selectOption:checked + .folderOption:before {
+																															  position: absolute;
+																															  right: 0;
+																															  height: 40px;
+																															  width: 40px;
+																															  content: '';
+																															  background: #FFF;
+																															}
+
+																															::-webkit-scrollbar {
+																															  display: none;
+																															}
+
+																															#cancelSaveConvo {
+																															  position: relative;
+																															  float: left;
+																															  display: inline-block;
+																															  font-family: Helvetica;
+																															  font-weight: 600;
+																															  font-size: 13px;
+																															  color: #7D848E;
+																															  cursor: pointer;
+																															  margin-left: -198px;
+																															}
+
+																															#cancelSaveConvo:hover {
+																															  color: #BEC1C6;
+																															}
+
+																															.messageLines {
+																															  line-height: 150%;
+																															}`;
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
@@ -207,23 +411,21 @@ var saveConversation = function() {
 				console.log("Prompted dialog for saving conversations.");
 
 				var saveForm = document.getElementById("saveForm");
-				var cancelForm = document.getElementById("cancelButton");
-
-				// TODO: Implement an onClick handler for an expanded folder view
+				var cancelButton = document.getElementById("cancelSaveConvo");
 
 				canvas.onclick = function() {
 					document.body.removeChild(signUpDialog);
 					document.body.removeChild(canvas);
 				}
 
-				cancelForm.onclick = function() {
+				cancelButton.onclick = function() {
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
 
 				saveForm.onsubmit = function() {
 					var name = (this).name.value;
-					var folder = (this).folder.value;
+					//var folder = (this).folder.value; // Needs to be fixed
 
 					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
