@@ -30,7 +30,7 @@ def get_all_content(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 
 	# TODO: Add "root" as a property for folders so that we can rename the top-level folder
-	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "name": "root"})
+	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "root": True})
 
 	if root_folder:
 		return [get_all_content_recursive(mongo, root_folder)]
@@ -84,7 +84,8 @@ def add_user(mongo, request_json):
 			return False;
 
 	root_id = mongo.db.folders.insert({
-		"name": "root",
+		"name": "Everything",
+		"root": True,
 		"children": [],
 		"conversations": []
 	})
@@ -106,6 +107,7 @@ def add_folder(mongo, request_json):
 
 	folder_id = mongo.db.folders.insert({
 		"name": request_json["name"],
+		"root": False,
 		"children": [],
 		"conversations": [],
 		"user_id": ObjectId(str(user["_id"]))
@@ -138,22 +140,25 @@ def add_conversation(mongo, request_json):
 
 # DELETING
 
-# TODO: Make this not horribly inefficient
+# TODO: Also remove from parent folder's conversations list
 def delete_conversation(mongo, request_json):
-	for conversation in mongo.db.conversations.find():
-		if conversation["name"] == request_json["name"]:
-			mongo.db.conversations.remove(conversation["_id"])
+	for conversation in mongo.db.conversations.find({"name": request_json["name"]}):
+		mongo.db.conversations.remove(conversation["_id"])
 	return True
 
 # TODO: Make this not horribly inefficient
 # TODO: Fix duplicate parent-child bug
+# TODO: Stop user from "deleting" root folder in front-end
 def delete_folder(mongo, request_json):
 	for folder in mongo.db.folders.find({"name": request_json["parent"]}):
 		for subfolder_id in folder["children"]:
 			subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
 			if subfolder["name"] == request_json["name"]:
+				# Don't delete the root folder
+				if subfolder["root"]:
+					return
 				mongo.db.folders.remove(subfolder_id)
-				folder["children"].remove(subfolder_id)
+				# folder["children"].remove(subfolder_id)
 				# print("folder['_id']: " + str(folder["_id"]))
 				# print("subfolder_id: " + str(subfolder_id))
 				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
