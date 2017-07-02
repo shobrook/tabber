@@ -243,7 +243,7 @@ var registerPayload = function() {
 		window.postMessage({type: "signup_credentials", text: {"email": email, "password": password}}, '*');
 	}
 
-	loginForm.onclick = function() {
+	loginForm.onsubmit = function() {
 		var email = (this).tabberEmail.value;
 		var password = (this).tabberPass.value;
 
@@ -258,6 +258,7 @@ var registerPayload = function() {
 			console.log("User successfully registered.");
 		}
 		else if (event.data.type == "signUpValidation" && !(event.data.value)) {
+			// TODO: Append a red alert message
 			signUpForm.reset();
 			console.log("User tried signing up with invalid email.");
 		}
@@ -265,8 +266,9 @@ var registerPayload = function() {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully logged in.");
-		}
-		else if (event.data.type == "loginValidation" && !(event.data.value)) {
+		} 
+    else if (event.data.type == "loginValidation" && !(event.data.value)) {
+			// TODO: Append a red alert message
 			signUpForm.reset();
 			console.log("User inputted incorrect login credentials.");
 		}
