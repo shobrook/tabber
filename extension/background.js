@@ -121,6 +121,10 @@ chrome.runtime.onConnect.addListener(function(port) {
 						port.postMessage({registered: true});
 						onboarding = true;
 						signup = false;
+						chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+							var activeTab = tabs[0];
+							chrome.tabs.sendMessage(activeTab.id, {"message": "first_signup"});
+						});
 					}
 					POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, onBoarding);
 				} else if (!(JSON.parse(emailCheck).valid)) {
@@ -130,8 +134,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 			}
 			POST(VALIDATE_USER, {"email": msg.email}, addUser);
 			// TODO: Comparmentalize email validation in the NEW_USER route in server.py
-		}
-		else if (port.name == "login") {
+		} else if (port.name == "login") {
 			var updateTokens = function(credCheck) {
 				if (JSON.parse(credCheck).valid) {
 					console.log("Valid credentials. Logging in user.");
@@ -150,8 +153,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 			}
 			POST(VALIDATE_USER, {"email": msg.email, "password": msg.password}, updateTokens);
-		}
-		else if (port.name == "conversations") {
+		} else if (port.name == "conversations") {
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
 				if (onboarding) {
@@ -165,8 +167,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				// TODO: Send success confirmation back to save.js
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
-		}
-		else if (port.name == "get-conversations") {
+		} else if (port.name == "get-conversations") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var fileManager = function(folderList) {
 					var activeTab = tabs[0];
@@ -175,8 +176,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
 			});
-		}
-		else if (port.name == "add-folder") {
+		} else if (port.name == "add-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var addedFolder = function() {
 					// TODO: Send confirmation to the content scripts
@@ -184,8 +184,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(ADD_FOLDER, {"authToken": oauth, "parent": msg.parent, "name": msg.name}, addedFolder);
 			});
-		}
-		else if (port.name == "rename-folder") {
+		} else if (port.name == "rename-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var renamedFolder = function() {
 					// TODO: Send confirmation to the content scripts
