@@ -2,7 +2,7 @@
 
 /* GLOBALS */
 
-// Pulls user's unique authentication token; TODO: Needs to be fixed!
+// Pulls user's unique authentication token; TODO: Needs to be fixed using localStorage
 var oauth;
 chrome.identity.getAuthToken({interactive: true}, function(token) {
 	if (chrome.runtime.lastError) {
@@ -35,9 +35,9 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
-// Boolean for whether onboarding should be initiated
+// Boolean for whether onboarding should be initiated; TODO: Put in localStorage
 var onboarding;
-// Boolean for whether signup should be initiated
+// Boolean for whether signup should be initiated; TODO: Put in localStorage
 var signup = true; // NOTE: Set as "true" for testing only
 
 /* MAIN */
@@ -128,7 +128,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 				} else if (!(JSON.parse(user).registered)) {
 					console.log("Email is already in use. Try again.");
 					port.postMessage({type: "registered", value: false});
-					onboarding = false; // Might not be necessary..
 				}
 			}
 			POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, addUser);
@@ -138,30 +137,29 @@ chrome.runtime.onConnect.addListener(function(port) {
 					console.log("Valid credentials. Logging in user.");
 					port.postMessage({type: "logged-in", value: true});
 					signup = false;
-					onboarding = false; // I think..
+					onboarding = false;
 				} else if (!(JSON.parse(user).logged_in)) {
 					console.log("Invalid credentials. Try again.");
 					port.postMessage({type: "logged-in", value: false});
 				}
 			}
 			POST(UPDATE_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, updateUser);
-		} else if (port.name == "onboarding") {
-			if (msg.submitted)
+		} else if (port.name == "onboarding") { // Handles requests from the "onboarding" port
+			if (msg.type == "understood" && msg.value)
 				onboarding = false;
-			else if (!(msg.submitted))
+			else if (msg.type == "understood" && !(msg.value))
 				onboarding = true;
-		} else if (port.name == "conversations") {
+		} else if (port.name == "conversations") { // Handles requests from the "conversations" port
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
 				if (onboarding) {
 					console.log("User's first time saving a conversation.");
 					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 						var activeTab = tabs[0];
-						chrome.tabs.sendMessage(activeTab.id, {"message": "first_save"});
+						chrome.tabs.sendMessage(activeTab.id, {"message": "first-save"});
 					});
 				}
-				port.postMessage({saved: true});
-				// TODO: Send success confirmation back to save.js
+				port.postMessage({type: "save-confirmation", value: true});
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
 		} else if (port.name == "get-conversations") {
