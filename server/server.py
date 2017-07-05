@@ -129,6 +129,11 @@ def bad_request(error):
 	error_print(400, error.description)
 	return "Bad Request", 400
 
+@app.errorhandler(401)
+def bad_request(error):
+	error_print(401, error.description)
+	return "Unauthorized", 401
+
 @app.errorhandler(500)
 def internal_error(error):
 	error_print(500, error.description)
