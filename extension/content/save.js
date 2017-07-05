@@ -152,16 +152,14 @@ var saveConversation = function() {
 	}
 
 	window.addEventListener('message', function(event) {
-		if (event.data.type && event.data.type == "tabber_run") {
-			console.log("JS injection received: " + event.data.text);
+		if (event.data.type == "tabber-run") {
+			console.log("Browser action has been clicked.");
 
 			selectMessages(function(selectedMessages) {
-				// TODO: Implement an option to display an expanded file view
-
 				// HTML generator for the folder dropdown
 				var folderHTML = "";
 				var count = 0;
-				event.data.contents.forEach(function(f) {
+				event.data.value.forEach(function(f) {
 					if (count == 0)
 						folderHTML += "<input class='selectOption' type='radio' id='opt" + count + "' checked><label for='opt" + count + "' class='folderOption'>" + f + "</label>"
 					else
@@ -202,6 +200,7 @@ var saveConversation = function() {
 										      </div><!--#saveContent-->
 										    </div><!--#saveConvoWrapper-->`;
 
+				// Assigns CSS attributes to the canvas and save dialog container
 				canvas.style.backgroundColor = "rgba(0,0,0,.35)";
 				canvas.style.zIndex = "2147483647";
 				canvas.style.width = "100%";
@@ -221,9 +220,9 @@ var saveConversation = function() {
 				saveDialog.style.backgroundColor = "#FFFFFF";
 				saveDialog.style.zIndex = "2147483647";
 
-				saveDialog.innerHTML = formDefs;
+				saveDialog.innerHTML = formDefs; // Wraps the save form and message preview with the dialog container
 
-				// TODO: Slim down and reorganized all of this CSS
+				// TODO: Slim down and reorganize all of this CSS
 				document.getElementsByTagName('style')[0].innerHTML = `.convoWrapper {
 																															  overflow: hidden;
 																															  height: 145px;
@@ -408,8 +407,6 @@ var saveConversation = function() {
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
 
-				console.log("Prompted dialog for saving conversations.");
-
 				var saveForm = document.getElementById("saveForm");
 				var cancelButton = document.getElementById("cancelSaveConvo");
 
@@ -425,17 +422,19 @@ var saveConversation = function() {
 
 				saveForm.onsubmit = function() {
 					var name = (this).name.value;
-					//var folder = (this).folder.value; // Needs to be fixed
+					//var folder = (this).folder.value; // TODO: Pull the folder name from selection in the dropdown
 
-					window.postMessage({type: "dialog_input", text: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
+					window.postMessage({type: "save-input", value: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
 						if (event.data.type == 'save-confirmation' && event.data.value) {
 							// TODO: Implement a sweet alert notification for successfully saved convos
 							document.body.removeChild(saveDialog);
 							document.body.removeChild(canvas);
 						}
-					})
+					});
 				}
+
+				console.log("Prompted dialog for saving conversations.");
 			});
 		}
 	});
@@ -448,7 +447,7 @@ var injectSaveConversation = function() {
 	document.head.appendChild(script);
 }
 
-// Listens for browser action click
+// Listens for "clicked-browser-action" event from background script
 chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 	if (request.message == "clicked-browser-action" && !injectedSaveConversation) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
@@ -456,19 +455,19 @@ chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 		injectSaveConversation();
 	}
 	if (request.message == "clicked-browser-action")
-		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
+		window.postMessage({type: 'tabber-run', value: request.folders}, '*' );
 });
 
-// Passes conversation payload to background script
+// Pulls conversation payload from JS injection and passes to background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "dialog_input") {
-		console.log("Messages, labeled '" + event.data.text.name + "', sent to '" + event.data.text.folder + "'");
-		conversationPort.postMessage({name: event.data.text.name, folder: event.data.text.folder, messages: event.data.text.messages});
+	if (event.data.type == "save-input") {
+		console.log("Messages, labeled '" + event.data.value.name + "', sent to '" + event.data.value.folder + "'");
+		conversationPort.postMessage({name: event.data.value.name, folder: event.data.value.folder, messages: event.data.value.messages});
 	}
 });
 
-// Receives "saved conversation" confirmation from background script
+// Listens for "saved conversation" confirmation from background script
 conversationPort.onMessage.addListener(function(msg) {
-	if (msg.saved)
-		window.postMessage({type: 'save-confirmation', value: msg.saved}, '*');
+	if (msg.type == "save-confirmation")
+		window.postMessage({type: 'save-confirmation', value: msg.value}, '*');
 });
