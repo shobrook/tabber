@@ -2,9 +2,8 @@
 
 var registerPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "register"});
 var loginPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "login"});
-var onboardingPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "onboarding"});
 
-injectedRegisterDialog = false;
+//injectedRegisterDialog = false;
 
 /* MAIN */
 
@@ -46,6 +45,7 @@ var registerPayload = function() {
 							      </div><!--tabContent-->
 							    </div><!--registerWrapper-->`;
 
+  // Assigns CSS attributes to the canvas and signup dialog container
 	canvas.style.backgroundColor = "rgba(0,0,0,.35)";
 	canvas.style.zIndex = "2147483647";
 	canvas.style.width = "100%";
@@ -66,8 +66,9 @@ var registerPayload = function() {
 	signUpDialog.style.backgroundColor = "#FFFFFF";
 	signUpDialog.style.zIndex = "2147483647";
 
-	signUpDialog.innerHTML = formDefs;
+	signUpDialog.innerHTML = formDefs; // Wraps the signup form and tabs with the dialog container
 
+	// Assigns CSS to the signup form and tabs
 	document.getElementsByTagName('style')[0].innerHTML = `.dialogTabs {
 																												  overflow: hidden;
 																												  font-family: Helvetica;
@@ -200,15 +201,8 @@ var registerPayload = function() {
 																												  background-color: rgb(101,184,203);
 																												}`;
 
-	document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
-	document.body.appendChild(signUpDialog); // Prompts the "sign up" dialog
-
-	canvas.onclick = function() {
-		window.postMessage({type: "registered", value: false}, '*');
-		document.body.removeChild(signUpDialog);
-		document.body.removeChild(canvas);
-		console.log("User clicked canvas.");
-	}
+	document.body.appendChild(canvas); // Imposes a low-opacity canvas on entire page
+	document.body.appendChild(signUpDialog); // Prompts the signup dialog
 
 	var signUpTab = document.getElementById("signUpTab");
 	var loginTab = document.getElementById("loginTab");
@@ -217,56 +211,71 @@ var registerPayload = function() {
 	var signUpTabContent = document.getElementById("signUpTabContent");
 	var selector = document.getElementById("selector");
 
-	loginTab.onclick = function() {
-	  signUpTab.style.color = "rgb(195,208,225)";
-	  loginTab.style.color = "rgb(44,158,212)";
-	  selector.style.marginLeft = "279px";
-	  signUpTabContent.style.display = "none";
-	  loginTabContent.style.display = "initial";
-	}
-
-	signUpTab.onclick = function() {
-	  signUpTab.style.color = "rgb(44,158,212)";
-	  loginTab.style.color = "rgb(195,208,225)";
-	  selector.style.marginLeft = "40px";
-	  loginTabContent.style.display = "none";
-	  signUpTabContent.style.display = "initial";
-	}
-
 	var signUpForm = document.getElementById("signUpForm");
 	var loginForm = document.getElementById("loginForm");
 
+	// Exits dialog when user clicks back into messenger; passes message back to content script
+	canvas.onclick = function() {
+		//window.postMessage({type: "canvas-click", value: false}, '*');
+		document.body.removeChild(signUpDialog);
+		document.body.removeChild(canvas);
+		console.log("User clicked canvas.");
+	}
+
+	// Loads login form when login tab is clicked
+	loginTab.onclick = function() {
+	  signUpTab.style.color = "rgb(195,208,225)";
+	  loginTab.style.color = "rgb(44,158,212)";
+		signUpTabContent.style.display = "none";
+		loginTabContent.style.display = "initial";
+		selector.style.marginLeft = "279px";
+	}
+
+	// Loads signup form when signup tab is clicked
+	signUpTab.onclick = function() {
+	  signUpTab.style.color = "rgb(44,158,212)";
+	  loginTab.style.color = "rgb(195,208,225)";
+		loginTabContent.style.display = "none";
+	  signUpTabContent.style.display = "initial";
+		selector.style.marginLeft = "40px";
+	}
+
+	// Pull inputs from signup form and pass credentials to content script
 	signUpForm.onsubmit = function() {
 		var email = (this).tabberEmail.value;
 		var password = (this).tabberPass.value;
 
-		window.postMessage({type: "signup_credentials", text: {"email": email, "password": password}}, '*');
+		if (password.length < 6) {
+			// TODO: Append red alert message
+		} else
+			window.postMessage({type: "signup-credentials", value: {"email": email, "password": password}}, '*');
 	}
 
+	// Pull inputs from login form and pass credentials to content script
 	loginForm.onsubmit = function() {
 		var email = (this).tabberEmail.value;
 		var password = (this).tabberPass.value;
 
-		console.log(email + " " + password);
-		window.postMessage({type: "login_credentials", text: {"email": email, "password": password}}, '*');
+		window.postMessage({type: "login-credentials", value: {"email": email, "password": password}}, '*');
 	}
 
+	// Signup and login validation
 	window.addEventListener('message', function(event) {
-		if (event.data.type == "signUpValidation" && event.data.value) {
+		if (event.data.type == "registered" && event.data.value) {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully registered.");
-		} else if (event.data.type == "signUpValidation" && !(event.data.value)) {
+		} else if (event.data.type == "registered" && !(event.data.value)) {
 			// TODO: Append a red alert message
 			signUpForm.reset();
 			console.log("User tried signing up with invalid email.");
-		} else if (event.data.type == "loginValidation" && event.data.value) {
+		} else if (event.data.type == "logged-in" && event.data.value) {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully logged in.");
-		} else if (event.data.type == "loginValidation" && !(event.data.value)) {
+		} else if (event.data.type == "logged-in" && event.data.value) {
 			// TODO: Append a red alert message
-			signUpForm.reset();
+			loginForm.reset();
 			console.log("User inputted incorrect login credentials.");
 		}
 	});
@@ -281,31 +290,31 @@ var registerInject = function() {
 	document.head.appendChild(script);
 }
 
-// Listens for the "extension install" event
+// Listens for the "prompt-signup" event from the background script
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.message == "first_install") {
-		console.log("User has installed tabber for the first time.");
+	if (request.message == "prompt-signup") {
+		console.log("User hasn't signed up for (or logged in) tabber.");
 		registerInject();
 	}
 });
 
-// Injected JS --> here --> background script
+// Pulls credentials from JS injection and passes to background script
 window.addEventListener('message', function(event) {
-	if (event.data.type == "signup_credentials")
-		registerPort.postMessage({email: event.data.text.email, password: event.data.text.password});
-	else if (event.data.type == "login_credentials")
-		loginPort.postMessage({email: event.data.text.email, password: event.data.text.password});
-	else if (event.data.type == "registered")
-		onboardingPort.postMessage({registered: event.data.value});
+	if (event.data.type == "signup-credentials")
+		registerPort.postMessage({email: event.data.value.email, password: event.data.value.password});
+	else if (event.data.type == "login-credentials")
+		loginPort.postMessage({email: event.data.value.email, password: event.data.value.password});
+	//else if (event.data.type == "canvas-click")
 });
 
-// Background script --> here --> injected JS
+// Listens for signup validation and passes to JS injection
 registerPort.onMessage.addListener(function(msg) {
-	if (msg.registered == true || msg.registered == false)
-		window.postMessage({type: "signUpValidation", value: msg.registered}, '*');
+	if (msg.type == "registered")
+		window.postMessage({type: "registered", value: msg.value}, '*');
 });
 
+// Listens for login validation and passes to JS injection
 loginPort.onMessage.addListener(function(msg) {
-	if (msg.loggedIn)
-		window.postMessage({type: "loginValidation", value: msg.loggedIn}, '*');
+	if (msg.type == "logged-in")
+		window.postMessage({type: "logged-in", value: msg.value}, '*');
 });
