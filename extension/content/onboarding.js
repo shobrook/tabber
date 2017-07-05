@@ -129,14 +129,14 @@ var fileManagerProtipPayload = function() {
 
 	form.onsubmit = function() {
 		console.log("User confirmed protip.");
-		window.postMessage({type: "submit", submitted: true}, '*'); // CHECK
+		window.postMessage({type: "submitted", value: true}, '*'); // CHECK
 
 		document.body.removeChild(protip);
 		document.body.removeChild(canvas);
 	}
 
 	canvas.onclick = function() {
-		window.postMessage({type: "submit", submitted: false}, '*'); // CHECK
+		window.postMessage({type: "submitted", value: false}, '*'); // CHECK
 
 		document.body.removeChild(protip);
 		document.body.removeChild(canvas);
@@ -159,19 +159,19 @@ var fileManagerProtipInject = function() {
 	document.head.appendChild(script);
 }
 
-// Listens for the first "saved messages" event
+// Listens for the "first-signup" and "first-save" events from background script
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.message == "first_save") {
-		console.log("User has saved a conversation for the first time.");
-		fileManagerProtipInject();
-	} else if (request.message = "first-signup") {
-		console.log("User has signed up for the first time.");
+	if (request.message == "first-signup") {
+		console.log("User signed up for the first time.");
 		selectMessagesProtipInject();
+	} else if (request.message == "first-save") {
+		console.log("User saved a conversation for the first time.");
+		fileManagerProtipInject();
 	}
 });
 
-// Injected JS --> here --> background script
+// Pulls submission confirmation from JS injection and passes to background script
 window.addEventListener('message', function(event) {
-	if (event.data.type && event.data.type == "submit")
-		onboardingPort.postMessage({submitted: event.data.submitted});
+	if (event.data.type == "submitted")
+		onboardingPort.postMessage({type: "understood", value: event.data.value});
 });
