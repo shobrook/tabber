@@ -450,12 +450,12 @@ var injectSaveConversation = function() {
 
 // Listens for browser action click
 chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
-	if (request.message == "clicked_browser_action" && !injectedSaveConversation) {
+	if (request.message == "clicked-browser-action" && !injectedSaveConversation) {
 		console.log("User clicked browser action for first time. Injecting stuff.");
 		injectedSaveConversation = true;
 		injectSaveConversation();
 	}
-	if (request.message == "clicked_browser_action")
+	if (request.message == "clicked-browser-action")
 		window.postMessage({type: 'tabber_run', text: 'Browser action clicked.', contents: request.folders}, '*' );
 });
 
