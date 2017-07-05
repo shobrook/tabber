@@ -96,6 +96,15 @@ def rename_folder():
 
 	return jsonify({"folders": utilities.rename_folder(mongo, request.json)})
 
+# Renames the specified folder
+@app.route("/tabber/api/delete_folder", methods=["POST"])
+def delete_folder():
+	# Request: {"authToken": "...", "name": "...", "parentName"}
+	if not request.json or not "authToken" in request.json:
+		abort(400, "delete_folder(): request.json does not exist or does not contain 'authToken'")
+
+	return jsonify({"folders": utilities.delete_folder(mongo, request.json)})
+
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
 def get_database():

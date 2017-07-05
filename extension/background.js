@@ -22,6 +22,7 @@ const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
 const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
 const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
+const DELETE_FOLDER = "http://localhost:5000/tabber/api/delete_folder";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -187,6 +188,16 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(RENAME_FOLDER, {"authToken": oauth, "name": msg.name, "newName": msg.newName}, renamedFolder);
 			});
+    } else if (port.name == "delete-folder") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var deletedFolder = function() {
+					// TODO: Send confirmation to the content scripts
+					console.log("Folder was (supposedly) deleted.");
+				}
+				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parent": msg.parent}, deletedFolder);
+			});
+		} else if (port.name == "invite-friend") {
+			console.log("User wants to invite a friend");
 		}
 	});
 });
