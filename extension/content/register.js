@@ -247,6 +247,8 @@ var registerPayload = function() {
 
 		if (password.length < 6) {
 			// TODO: Append red alert message
+			console.log("User's password is too short.");
+			signUpForm.reset();
 		} else
 			window.postMessage({type: "signup-credentials", value: {"email": email, "password": password}}, '*');
 	}
@@ -273,7 +275,7 @@ var registerPayload = function() {
 			document.body.removeChild(signUpDialog);
 			document.body.removeChild(canvas);
 			console.log("User successfully logged in.");
-		} else if (event.data.type == "logged-in" && event.data.value) {
+		} else if (event.data.type == "logged-in" && !(event.data.value)) {
 			// TODO: Append a red alert message
 			loginForm.reset();
 			console.log("User inputted incorrect login credentials.");
