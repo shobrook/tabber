@@ -33,32 +33,23 @@ mongo = PyMongo(app)
 def main():
 	return 404
 
-# Initializes and populates a new user's documents
+# Initializes and populates a new user's documents; also checks for valid email
 @app.route("/tabber/api/new_user", methods=["POST"])
 def new_user():
 	# Request: {"authToken": "...", "email": "...", "password": "..."}
 	if not request.json or not "authToken" in request.json:
 		abort(400, "new_user(): request.json does not exist or does not contain 'authToken'")
 
-	return jsonify({"user_id": utilities.add_user(mongo, request.json)})
+	return jsonify({"registered": utilities.add_user(mongo, request.json)})
 
-# Updates a user's authToken list with new device
+# Updates a user's authToken list with new device; checks for valid login credentials
 @app.route("/tabber/api/update_user", methods=["POST"])
 def update_user():
 	# Request: {"authToken": "...", "email": "...", "password": "..."}
 	if not request.json or not "authToken" in request.json:
 		abort(400, "update_user(): request.json does not exist or does not contain 'authToken'")
 
-	return jsonify({"updated": utilities.update_user(mongo, request.json)})
-
-# Checks if a given email or email/password combo is already registered
-@app.route("/tabber/api/validate_user", methods=["POST"])
-def validate_user():
-	# Request: {"email": "..."} OR {"email": "...", "password": "..."}
-	if not request.json or not "email" in request.json:
-		return abort(400, "validate_user(): request.json does not exist or does not contain 'email'")
-
-	return jsonify({"valid": utilities.validate_user(mongo, request.json)})
+	return jsonify({"logged_in": utilities.update_user(mongo, request.json)})
 
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])

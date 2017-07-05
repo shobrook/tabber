@@ -80,6 +80,10 @@ def get_database(mongo):
 # ADDING
 
 def add_user(mongo, request_json):
+	for u in mongo.db.users.find():
+		if u["email"] == request_json["email"]:
+			return False;
+
 	root_id = mongo.db.folders.insert({
 		"name": "root",
 		"children": [],
@@ -96,7 +100,7 @@ def add_user(mongo, request_json):
 		{"$set": {"user_id": ObjectId(str(user_id))}
 	}, upsert=False)
 
-	return str(user_id)
+	return True;
 
 # Adds folder under a specified parent folder
 def add_folder(mongo, request_json):
@@ -144,18 +148,21 @@ def rename_folder(mongo, request_json):
 	return True
 
 def update_user(mongo, request_json):
-	user = mongo.db.users.find_one({
-		"email": request_json["email"],
-		"password": request_json["password"]
-	})
-	if request_json["authToken"] in user["authToken"]:
-		return False
-	else:
-		mongo.db.users.update_one({
-			"_id": ObjectId(str(user["_id"]))},
-			{"$push": {"authToken": request_json["authToken"]}
-		}, True)
-	return True
+	for u in mongo.db.users.find():
+		if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
+			user = mongo.db.users.find_one({
+				"email": request_json["email"],
+				"password": request_json["password"]
+			})
+			if request_json["authToken"] not in user["authToken"]:
+				mongo.db.users.update_one({
+					"email": request_json["email"],
+					"password": request_json["password"]},
+					{"$push": {"authToken": request_json["authToken"]}
+				}, True)
+      return True
+
+  return False
 
 
 
@@ -182,20 +189,6 @@ def delete_folder(mongo, request_json):
 				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
 				return
 	return True
-
-
-
-# MISCELLANIOUS
-
-def validate_user(mongo, request_json):
-	if not "password" in request_json:
-		if mongo.db.users.find({"email": request_json["email"]}) != []:
-				return False
-		return True
-
-	if mongo.db.users.find({"email": request_json["email"], "password": request.json["password"]}) != []:
-			return True
-	return False
 
 
 

@@ -2,7 +2,7 @@
 
 /* GLOBALS */
 
-// Pulls user's unique authentication token; TODO: Needs to be fixed!
+// Pulls user's unique authentication token; TODO: Needs to be fixed using localStorage
 var oauth;
 chrome.identity.getAuthToken({interactive: true}, function(token) {
 	if (chrome.runtime.lastError) {
@@ -36,20 +36,22 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
-// Boolean for whether onboarding should be initiated
+// Boolean for whether onboarding should be initiated; TODO: Put in localStorage
 var onboarding;
-// Boolean for whether signup should be initiated
-var signup = false; // NOTE: Set as "true" for testing only
+// Boolean for whether signup should be initiated; TODO: Put in localStorage
+var signup = true; // NOTE: Set as "true" for testing only
 
 /* MAIN */
 
 // Prompts the sign-up dialog on "first-install"; provides handler for extension updates
+// QUESTION: Is a listener for a "first-load" of messenger.com needed? The "onInstalled" event
+// probably fires before a user visits messenger
 chrome.runtime.onInstalled.addListener(function(details) {
 	if (details.reason == "install") {
 		console.log("User has installed tabber for the first time on this device.");
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var activeTab = tabs[0];
-			chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
 		});
 		signup = true;
 	} else if (details.reason == "update") {
@@ -58,114 +60,107 @@ chrome.runtime.onInstalled.addListener(function(details) {
 	}
 });
 
-// Passes user's folder references to save.js and prompts "select messages" dialog on click of browser action
+// Listens for the browser action to be clicked
 chrome.browserAction.onClicked.addListener(function(tab) {
-	if (signup) {
+	if (signup) { // If user hasn't signed up or logged in yet, prompt the register process
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var activeTab = tabs[0];
-			chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
 		});
-	} else {
+	} else { // If user has signed up or logged in, prompt the select messages canvas
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var saveDialog = function(folders) {
 				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_browser_action", "folders": JSON.parse(folders).folders});
+				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked-browser-action", "folders": JSON.parse(folders).folders});
 				console.log("Passed folder references to save dialog.");
 			}
-			POST(GET_FOLDERS, {"authToken": oauth}, saveDialog); // TODO: Only pull the top 10 most popular folders
+			POST(GET_FOLDERS, {"authToken": oauth}, saveDialog); // Pass user's folder references to the save dialog
 		});
 	}
 });
 
-// Creates "Find Messages" in context menu and prompts file manager
+// Creates "Find Messages" in context menu
 chrome.contextMenus.create({
 	title: "Open Tabber",
 	contexts: ["browser_action"],
 	onclick: function () {
-		if (!signup) {
+		if (!signup) { // If user has signed up or logged in, prompt the file manager
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_find_messages"});
+				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_find_messages"}); // CHECK
 			});
-			onboarding = false;
-		} else {
+			onboarding = false; // CHECK
+		} else { // If user hasn't signed up or logged in yet, prompt the register process
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+				chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
 			});
 		}
 	}
 });
 
-// Creates "Sign In" in context menu and prompts file manager
-// TODO: Eventually change this to "Log In" once we have a separate login dialog
+// Creates "Sign In" in context menu and prompts file manager; NOTE: Testing only
+// TODO: Replace this with "Log Out" in the context menu
 chrome.contextMenus.create({
 	title: "Sign Up",
 	contexts: ["browser_action"],
 	onclick: function () {
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var activeTab = tabs[0];
-			chrome.tabs.sendMessage(activeTab.id, {"message": "first_install"});
+			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
 		});
 	}
 });
 
-// Content scripts --> here --> server.py --> here --> content scripts
+// Listens for long-lived port connections (from content scripts)
 chrome.runtime.onConnect.addListener(function(port) {
 	port.onMessage.addListener(function(msg) {
-		if (port.name == "register") {
-			var addUser = function(emailCheck) {
-				if (JSON.parse(emailCheck).valid) {
+		if (port.name == "register") { // Handles requests from the "register" port
+			var addUser = function(user) {
+				if (JSON.parse(user).registered) {
 					console.log("Email is valid. Registering user.");
-					var onBoarding = function(userID) {
-						console.log("User has successfully registered.");
-						port.postMessage({registered: true});
-						onboarding = true;
-						signup = false;
-						chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-							var activeTab = tabs[0];
-							chrome.tabs.sendMessage(activeTab.id, {"message": "first_signup"});
-						});
-					}
-					POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, onBoarding);
-				} else if (!(JSON.parse(emailCheck).valid)) {
-					console.log("Email is invalid. Try again.");
-					port.postMessage({registered: false});
+					port.postMessage({type: "registered", value: true});
+					onboarding = true;
+					signup = false;
+					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+						var activeTab = tabs[0];
+						chrome.tabs.sendMessage(activeTab.id, {"message": "first-signup"});
+					});
+				} else if (!(JSON.parse(user).registered)) {
+					console.log("Email is already in use. Try again.");
+					port.postMessage({type: "registered", value: false});
 				}
 			}
-			POST(VALIDATE_USER, {"email": msg.email}, addUser);
-			// TODO: Comparmentalize email validation in the NEW_USER route in server.py
-		} else if (port.name == "login") {
-			var updateTokens = function(credCheck) {
-				if (JSON.parse(credCheck).valid) {
+			POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, addUser);
+		} else if (port.name == "login") { // Handles requests from the "login" port
+			var updateUser = function(user) {
+				if (JSON.parse(user).logged_in) {
 					console.log("Valid credentials. Logging in user.");
-					var deviceCheck = function(device) {
-						if (JSON.parse(device).updated)
-							console.log("User is logging in via a new device. Successfully updated user's authentication tokens.");
-						else if (!(JSON.parse(device).updated))
-							console.log("User is logging in via a known device.");
-						port.postMessage({loggedIn: true});
-						signup = false;
-					}
-					POST(UPDATE_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, deviceCheck);
-				} else if (!(JSON.parse(credCheck).valid)) {
-					console.log("Invalid credentials.");
-					port.postMessage({loggedIn: false});
+					port.postMessage({type: "logged-in", value: true});
+					signup = false;
+					onboarding = false;
+				} else if (!(JSON.parse(user).logged_in)) {
+					console.log("Invalid credentials. Try again.");
+					port.postMessage({type: "logged-in", value: false});
 				}
 			}
-			POST(VALIDATE_USER, {"email": msg.email, "password": msg.password}, updateTokens);
-		} else if (port.name == "conversations") {
+			POST(UPDATE_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, updateUser);
+		} else if (port.name == "onboarding") { // Handles requests from the "onboarding" port
+			if (msg.type == "understood" && msg.value)
+				onboarding = false;
+			else if (msg.type == "understood" && !(msg.value))
+				onboarding = true;
+		} else if (port.name == "conversations") { // Handles requests from the "conversations" port
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
 				if (onboarding) {
 					console.log("User's first time saving a conversation.");
 					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 						var activeTab = tabs[0];
-						chrome.tabs.sendMessage(activeTab.id, {"message": "first_save"});
+						chrome.tabs.sendMessage(activeTab.id, {"message": "first-save"});
 					});
 				}
-				port.postMessage({saved: true});
-				// TODO: Send success confirmation back to save.js
+				port.postMessage({type: "save-confirmation", value: true});
 			}
 			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
 		} else if (port.name == "get-conversations") {
@@ -193,8 +188,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(RENAME_FOLDER, {"authToken": oauth, "name": msg.name, "newName": msg.newName}, renamedFolder);
 			});
-		}
-		else if (port.name == "delete-folder") {
+    } else if (port.name == "delete-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var deletedFolder = function() {
 					// TODO: Send confirmation to the content scripts
@@ -202,15 +196,8 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parent": msg.parent}, deletedFolder);
 			});
-		}
-		else if (port.name == "invite-friend") {
+		} else if (port.name == "invite-friend") {
 			console.log("User wants to invite a friend");
-		}
-		else if (port.name == "onboarding") {
-			onboarding = msg.submitted ? true : false
-		}
-		else if (port.name == "registered") {
-			signup = msg.registered ? true : false
 		}
 	});
 });
