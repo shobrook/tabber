@@ -4,10 +4,10 @@ from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 
 
+
 # GETTING
 
 def get_all_content_recursive(mongo, folder):
-
 	if folder is None:
 		return
 
@@ -27,7 +27,7 @@ def get_all_content_recursive(mongo, folder):
 
 # TODO: Make this not atrociously inefficient
 def get_all_content(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 
 	# TODO: Add "root" as a property for folders so that we can rename the top-level folder
 	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "name": "root"})
@@ -39,7 +39,7 @@ def get_all_content(mongo, request_json):
 	return None
 
 def get_folders(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	folder_name_list = []
 	for folder in mongo.db.folders.find({"user_id": user["_id"]}):
 		folder_name_list.append(folder["name"])
@@ -53,7 +53,6 @@ def get_database(mongo):
 	for u in mongo.db.users.find():
 		users.append({
 			"_id": str(u["_id"]),
-			"authToken": u["authToken"],
 			"email": u["email"],
 			"password": u["password"],
 			"root": str(u["root"])
@@ -90,7 +89,6 @@ def add_user(mongo, request_json):
 		"conversations": []
 	})
 	user_id = mongo.db.users.insert({
-		"authToken": [request_json["authToken"]],
 		"email": request_json["email"],
 		"password": request_json["password"],
 		"root": root_id
@@ -104,7 +102,7 @@ def add_user(mongo, request_json):
 
 # Adds folder under a specified parent folder
 def add_folder(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 
 	folder_id = mongo.db.folders.insert({
 		"name": request_json["name"],
@@ -121,7 +119,7 @@ def add_folder(mongo, request_json):
 	return str(folder_id)
 
 def add_conversation(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	folder = mongo.db.folders.find_one({"name": request_json["folder"], "user_id": ObjectId(str(user["_id"]))})
 	convo = {
 		"name": request_json["name"],
@@ -135,34 +133,6 @@ def add_conversation(mongo, request_json):
 	}, True)
 
 	return str(convo_id)
-
-
-
-# EDITING
-
-def rename_folder(mongo, request_json):
-	mongo.db.folders.update_one({
-		"name": request_json["name"]},
-		{"$set": {"name": request_json["newName"]}
-	}, True)
-	return True
-
-def update_user(mongo, request_json):
-	for u in mongo.db.users.find():
-		if u["email"] == request.json["email"] and u["password"] == request.json["password"]:
-			user = mongo.db.users.find_one({
-				"email": request_json["email"],
-				"password": request_json["password"]
-			})
-			if request_json["authToken"] not in user["authToken"]:
-				mongo.db.users.update_one({
-					"email": request_json["email"],
-					"password": request_json["password"]},
-					{"$push": {"authToken": request_json["authToken"]}
-				}, True)
-      return True
-
-  return False
 
 
 
@@ -189,6 +159,28 @@ def delete_folder(mongo, request_json):
 				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
 				return
 	return True
+
+
+
+# EDITING
+
+def rename_folder(mongo, request_json):
+	mongo.db.folders.update_one({
+		"name": request_json["name"]},
+		{"$set": {"name": request_json["newName"]}
+	}, True)
+	return True
+
+
+
+# MISCELLANEOUS
+
+def check_user(mongo, request_json):
+	for u in mongo.db.users.find():
+		if u["email"] == request_json["email"] and u["password"] == request_json["password"]:
+			return True
+
+	return False
 
 
 

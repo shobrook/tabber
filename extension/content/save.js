@@ -411,7 +411,7 @@ var saveConversation = function() {
 				var cancelButton = document.getElementById("cancelSaveConvo");
 
 				canvas.onclick = function() {
-					document.body.removeChild(signUpDialog);
+					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
 

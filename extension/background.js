@@ -1,8 +1,10 @@
-// TODO: Don't prompt signup dialog after login
-
 /* GLOBALS */
 
-// Pulls user's unique authentication token; TODO: Needs to be fixed using localStorage
+// For calling GET and SET to the extension's local storage
+var storage = chrome.storage.local;
+
+/*
+// Pulls user's unique authentication token
 var oauth;
 chrome.identity.getAuthToken({interactive: true}, function(token) {
 	if (chrome.runtime.lastError) {
@@ -12,11 +14,11 @@ chrome.identity.getAuthToken({interactive: true}, function(token) {
 	oauth = token;
 	console.log(oauth);
 });
+*/
 
 // REST API endpoints
 const NEW_USER = "http://localhost:5000/tabber/api/new_user";
-const UPDATE_USER = "http://localhost:5000/tabber/api/update_user";
-const VALIDATE_USER = "http://localhost:5000/tabber/api/validate_user";
+const CHECK_USER = "http://localhost:5000/tabber/api/check_user";
 const ADD_CONVERSATION = "http://localhost:5000/tabber/api/add_conversation";
 const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
 const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
@@ -36,10 +38,12 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
-// Boolean for whether onboarding should be initiated; TODO: Put in localStorage
+// Boolean for whether onboarding should be initiated
 var onboarding;
-// Boolean for whether signup should be initiated; TODO: Put in localStorage
-var signup = true; // NOTE: Set as "true" for testing only
+// Boolean for whether signup should be initiated; NOTE: Set as "true" for testing only
+storage.set({"signup": true}, function() {
+	console.log("Signup is set to true.");
+}); // NOTE: Set as "true" for testing only
 
 /* MAIN */
 
@@ -53,7 +57,9 @@ chrome.runtime.onInstalled.addListener(function(details) {
 			var activeTab = tabs[0];
 			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
 		});
-		signup = true;
+		storage.set({"signup": true}, function() {
+			console.log("Signup is set to true.");
+		});
 	} else if (details.reason == "update") {
 		var thisVersion = chrome.runtime.getManifest().version;
 		console.log("Updated from " + details.previousVersion + " to " + thisVersion + " :)");
@@ -62,19 +68,50 @@ chrome.runtime.onInstalled.addListener(function(details) {
 
 // Listens for the browser action to be clicked
 chrome.browserAction.onClicked.addListener(function(tab) {
-	if (signup) { // If user hasn't signed up or logged in yet, prompt the register process
-		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-			var activeTab = tabs[0];
-			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
-		});
-	} else { // If user has signed up or logged in, prompt the select messages canvas
-		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-			var saveDialog = function(folders) {
+	storage.get("signup", function(signup) {
+		if (signup["signup"]) { // If user hasn't signed up or logged in yet, prompt the register process
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked-browser-action", "folders": JSON.parse(folders).folders});
-				console.log("Passed folder references to save dialog.");
+				chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+			});
+		} else { // If user has signed up or logged in, prompt the select messages canvas
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var saveDialog = function(folders) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "clicked-browser-action", "folders": JSON.parse(folders).folders});
+					console.log("Passed folder references to save dialog.");
+				}
+				storage.get("credentials", function(creds) {
+					POST(GET_FOLDERS, {"email": creds["credentials"]["email"]}, saveDialog); // Pass user's folder references to the save dialog
+				});
+			});
+		}
+	});
+});
+
+// Creates "Save Messages" in context menu
+chrome.contextMenus.create({
+	title: "Save to Tabber",
+	contexts: ["browser_action"],
+	onclick: function () {
+		storage.get("signup", function(signup) {
+			if (!signup["signup"]) { // If user has signed up or logged in, prompt the "save" dialog
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var saveDialog = function(folders) {
+						var activeTab = tabs[0];
+						chrome.tabs.sendMessage(activeTab.id, {"message": "clicked-browser-action", "folders": JSON.parse(folders).folders});
+						console.log("Passed folder references to save dialog.");
+					}
+					storage.get("credentials", function(creds) {
+						POST(GET_FOLDERS, {"email": creds["credentials"]["email"]}, saveDialog); // Pass user's folder references to the save dialog
+					});
+				});
+			} else { // If user hasn't signed up or logged in yet, prompt the register process
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+				});
 			}
-			POST(GET_FOLDERS, {"authToken": oauth}, saveDialog); // Pass user's folder references to the save dialog
 		});
 	}
 });
@@ -84,18 +121,22 @@ chrome.contextMenus.create({
 	title: "Open Tabber",
 	contexts: ["browser_action"],
 	onclick: function () {
-		if (!signup) { // If user has signed up or logged in, prompt the file manager
-			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_find_messages"}); // CHECK
-			});
-			onboarding = false; // CHECK
-		} else { // If user hasn't signed up or logged in yet, prompt the register process
-			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-				var activeTab = tabs[0];
-				chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
-			});
-		}
+		storage.get("signup", function(signup) {
+			if (!signup["signup"]) { // If user has signed up or logged in, prompt the file manager
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "clicked_find_messages"}); // CHECK
+				});
+				storage.set({"onboarding": false}, function() {
+					console.log("Onboarding set to false.");
+				});
+			} else { // If user hasn't signed up or logged in yet, prompt the register process
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+				});
+			}
+		});
 	}
 });
 
@@ -119,50 +160,69 @@ chrome.runtime.onConnect.addListener(function(port) {
 			var addUser = function(user) {
 				if (JSON.parse(user).registered) {
 					console.log("Email is valid. Registering user.");
-					port.postMessage({type: "registered", value: true});
-					onboarding = true;
-					signup = false;
-					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-						var activeTab = tabs[0];
-						chrome.tabs.sendMessage(activeTab.id, {"message": "first-signup"});
+					storage.set({"credentials": {"email": msg.email, "password": msg.password}}, function() {
+						port.postMessage({type: "registered", value: true});
+						storage.set({"onboarding": true}, function() {
+							console.log("Onboarding set to true.");
+						});
+						storage.set({"signup": false}, function() {
+							console.log("Signup set to false.");
+						});
+						chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+							var activeTab = tabs[0];
+							chrome.tabs.sendMessage(activeTab.id, {"message": "first-signup"});
+						});
 					});
 				} else if (!(JSON.parse(user).registered)) {
 					console.log("Email is already in use. Try again.");
 					port.postMessage({type: "registered", value: false});
 				}
 			}
-			POST(NEW_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, addUser);
+			POST(NEW_USER, {"email": msg.email, "password": msg.password}, addUser);
 		} else if (port.name == "login") { // Handles requests from the "login" port
 			var updateUser = function(user) {
 				if (JSON.parse(user).logged_in) {
 					console.log("Valid credentials. Logging in user.");
 					port.postMessage({type: "logged-in", value: true});
-					signup = false;
-					onboarding = false;
+					storage.set({"signup": false}, function() {
+						console.log("Signup set to false.");
+					});
+					storage.set({"onboarding": false}, function() {
+						console.log("Onboarding set to false.");
+					});
 				} else if (!(JSON.parse(user).logged_in)) {
 					console.log("Invalid credentials. Try again.");
 					port.postMessage({type: "logged-in", value: false});
 				}
 			}
-			POST(UPDATE_USER, {"authToken": oauth, "email": msg.email, "password": msg.password}, updateUser);
+			POST(CHECK_USER, {"email": msg.email, "password": msg.password}, updateUser);
 		} else if (port.name == "onboarding") { // Handles requests from the "onboarding" port
-			if (msg.type == "understood" && msg.value)
-				onboarding = false;
-			else if (msg.type == "understood" && !(msg.value))
-				onboarding = true;
+			if (msg.type == "understood" && msg.value) {
+				storage.set({"onboarding": false}, function() {
+					console.log("Onboarding set to false.");
+				});
+			} else if (msg.type == "understood" && !(msg.value)) {
+				storage.set({"onboarding": true}, function() {
+					console.log("Onboarding set to true.");
+				});
+			}
 		} else if (port.name == "conversations") { // Handles requests from the "conversations" port
 			var convoCheck = function(convoID) {
 				console.log("Successfully added selected conversation.");
-				if (onboarding) {
-					console.log("User's first time saving a conversation.");
-					chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-						var activeTab = tabs[0];
-						chrome.tabs.sendMessage(activeTab.id, {"message": "first-save"});
-					});
-				}
+				storage.get("onboarding", function(onboarding) {
+					if (onboarding["onboarding"]) {
+						console.log("User's first time saving a conversation.");
+						chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+							var activeTab = tabs[0];
+							chrome.tabs.sendMessage(activeTab.id, {"message": "first-save"});
+						});
+					}
+				});
 				port.postMessage({type: "save-confirmation", value: true});
 			}
-			POST(ADD_CONVERSATION, {"authToken": oauth, "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
+			storage.get("credentials", function(creds) {
+				POST(ADD_CONVERSATION, {"email": creds["credentials"]["email"], "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
+			});
 		} else if (port.name == "get-conversations") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var fileManager = function(folderList) {
@@ -170,7 +230,9 @@ chrome.runtime.onConnect.addListener(function(port) {
 					chrome.tabs.sendMessage(activeTab.id, {"message": "tabber_folder_list", "folderList": JSON.parse(folderList)});
 					console.log("Passed folder references to file manager.");
 				}
-				POST(GET_CONVERSATIONS, {"authToken": oauth}, fileManager);
+				storage.get("credentials", function(creds) {
+					POST(GET_CONVERSATIONS, {"email": creds["credentials"]["email"]}, fileManager);
+				});
 			});
 		} else if (port.name == "add-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -178,7 +240,9 @@ chrome.runtime.onConnect.addListener(function(port) {
 					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) added to the database.");
 				}
-				POST(ADD_FOLDER, {"authToken": oauth, "parent": msg.parent, "name": msg.name}, addedFolder);
+				storage.get("credentials", function(creds) {
+					POST(ADD_FOLDER, {"email": creds["credentials"]["email"], "parent": msg.parent, "name": msg.name}, addedFolder);
+				});
 			});
 		} else if (port.name == "rename-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -186,18 +250,20 @@ chrome.runtime.onConnect.addListener(function(port) {
 					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) renamed.");
 				}
-				POST(RENAME_FOLDER, {"authToken": oauth, "name": msg.name, "newName": msg.newName}, renamedFolder);
+				storage.get("credentials", function(creds) {
+					POST(RENAME_FOLDER, {"email": creds["credentials"]["email"], "name": msg.name, "newName": msg.newName}, renamedFolder);
+				});
 			});
-    } else if (port.name == "delete-folder") {
+		} else if (port.name == "delete-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var deletedFolder = function() {
 					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) deleted.");
 				}
-				POST(DELETE_FOLDER, {"authToken": oauth, "name": msg.name, "parent": msg.parent}, deletedFolder);
+				storage.get("credentials", function(creds) {
+					POST(DELETE_FOLDER, {"email": creds["credentials"]["email"], "name": msg.name, "parent": msg.parent}, deletedFolder);
+				});
 			});
-		} else if (port.name == "invite-friend") {
-			console.log("User wants to invite a friend");
 		}
 	});
 });
