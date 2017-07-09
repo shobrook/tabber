@@ -161,10 +161,9 @@ var saveConversation = function() {
 				var count = 0;
 				event.data.value.forEach(function(f) {
 					if (count == 0)
-						folderHTML += "<input class='selectOption' type='radio' id='opt" + count + "' checked><label for='opt" + count + "' class='folderOption'>" + f + "</label>"
+						folderHTML += "<option selected>" + f + "</option>";
 					else
-						folderHTML += "<input class='selectOption' type='radio' id='opt" + count + "'><label for='opt" + count + "' class='folderOption'>" + f + "</label>"
-					count++;
+						folderHTML += "<option>" + f + "</option>";
 				});
 
 				// HTML generator for selected messages preview
@@ -177,28 +176,33 @@ var saveConversation = function() {
 				var canvas = document.createElement('div');
 				var saveDialog = document.createElement("div");
 
-				var formDefs = `<div id="saveConvoWrapper" style="margin: auto;">
-										      <div class="convoWrapper">
-										        <div id="convoPreview">` +
-															messagePreview +
-										        `</div><!--#convoPreview-->
+				var formDefs = `<div id="tabberHeader">
+										      <img id="tabberWordmark" src="https://image.ibb.co/jKYbpa/Save_to_Tabber_WORDMARK.png">
+										      <img id="registerExit" src="https://image.ibb.co/drrQfF/Exit_Button.png">
+										    </div><!--#tabberHeader-->
+
+										    <div class="convoWrapper">
+										        <div class="convoPreviewWrapper">
+										          <div id="convoPreview">` +
+																messagePreview +
+										          `</div><!--#convoPreview-->
+										        </div><!--.convoPreviewWrapper-->
 										      </div><!--.convoWrapper-->
 
-										      <hr id="convoDivisor">
-
+										    <div id="saveConvoWrapper" style="margin: auto;">
 										      <div id="saveContent">
 										          <form id="saveForm">
 										            <input type="text" class="saveInputFields" id="convoName" autocomplete="off" placeholder="Conversation Name">
-										            <div class="selectFolders" tabindex="1">` +
+										            <select id="folderDropdown">` +
 																	folderHTML +
-										            `</div>
+																`</select>
 										            <input id="saveConvoButton" class="saveConvoButton" type="submit" value="Save">
-										            <div id="cancelSaveConvo">
-										              <p>Cancel</p>
-										            </div>
-										          </form><!--#saveForm-->
-										      </div><!--#saveContent-->
-										    </div><!--#saveConvoWrapper-->`;
+										            <div id="createNewFolder">
+										              <p>Create a new folder.</p>
+										          </div><!--#createNewFolder-->
+										          </form><!--saveForm-->
+										      </div><!--saveContent-->
+										    </div><!--saveConvoWrapper-->`;
 
 				// Assigns CSS attributes to the canvas and save dialog container
 				canvas.style.backgroundColor = "rgba(0,0,0,.35)";
@@ -211,44 +215,81 @@ var saveConversation = function() {
 				canvas.style.position = "absolute";
 
 				saveDialog.style.position = "fixed";
-				saveDialog.style.width = "50%";
-				saveDialog.style.height = "400px";
-				saveDialog.style.top = "15%";
-				saveDialog.style.left = "25%";
-				saveDialog.style.borderRadius = "5px";
-				saveDialog.style.padding = "20px";
+				saveDialog.style.width = "538px";
+				saveDialog.style.height = "349px";
+				saveDialog.style.top = "50%";
+				saveDialog.style.left = "50%";
+				saveDialog.style.borderRadius = "10px";
 				saveDialog.style.backgroundColor = "#FFFFFF";
+				saveDialog.style.marginLeft = "-269px";
+				saveDialog.style.transform = "translateY(-50%)";
 				saveDialog.style.zIndex = "2147483647";
 
 				saveDialog.innerHTML = formDefs; // Wraps the save form and message preview with the dialog container
 
-				// TODO: Slim down and reorganize all of this CSS
-				document.getElementsByTagName('style')[0].innerHTML = `.convoWrapper {
-																															  overflow: hidden;
-																															  height: 145px;
-																															  width: 478px;
+				document.getElementsByTagName('style')[0].innerHTML = `#convoPreview::-webkit-scrollbar {
+																															    width: 5px;
+																															}
+
+																															#convoPreview::-webkit-scrollbar-thumb {
+																															    background: #7D848E;
+																															}
+
+																															#convoPreview::-webkit-scrollbar-thumb:window-inactive {
+																															    background: #7D848E;
+																															}
+
+																															#tabberHeader {
+																															  background-color: #2C9ED4;
+																															  position: relative;
+																															  height: 42px;
+																															  margin-top: -19px;
+																															  border-radius: 10px 10px 0px 0px;
+																															}
+
+																															#tabberWordmark {
+																															  position: relative;
+																															  height: 16px;
+																															  margin-top: 12px;
+																															  margin-left: 30px;
+																															  pointer-events: none;
+																															}
+
+																															#registerExit {
+																															  position: relative;
+																															  height: 15px;
+																															  margin-left: 346px;
+																															  cursor: pointer;
+																															}
+
+																															.convoWrapper {
+																															  overflow-x: hidden;
+																															  padding-bottom: 10px;
+																															}
+
+																															.convoPreviewWrapper {
+																															  height: 120px;
 																															  font-family: Helvetica;
+																															  overflow: hidden;
+																															  box-shadow: 0px 1px 3px #D9D9D9;
 																															  font-size: 13px;
-																															  margin-left: 40px;
 																															}
 
 																															#convoPreview {
-																															  height: 87px;
-																															  margin-top: 30px;
+																															  height: 75px;
+																															  margin-top: 18px;
 																															  overflow-y: scroll;
+																															  margin-left: 30px;
 																															}
 
-																															#convoDivisor {
-																															  background-color: #F5F7F9;
-																															  height: 1px;
-																															  border: none;
-																															  margin-top: -3px;
+																															.messageLines {
+																															  line-height: 150%;
 																															}
 
 																															#saveContent {
 																															  position: relative;
-																															  top: 30px;
-																															  left: 40px;
+																															  top: 20px;
+																															  left: 30px;
 																															}
 
 																															.saveInputFields {
@@ -294,7 +335,7 @@ var saveConversation = function() {
 																															}
 
 																															.saveConvoButton:hover {
-																															  background-color: rgb(101,184,203);
+																															  background-color: #2890C1;
 																															}
 
 																															.selectFolders {
@@ -380,54 +421,67 @@ var saveConversation = function() {
 																															  background: #FFF;
 																															}
 
-																															::-webkit-scrollbar {
-																															  display: none;
-																															}
-
-																															#cancelSaveConvo {
-																															  position: relative;
-																															  float: left;
+																															#createNewFolder {
 																															  display: inline-block;
+																															  position: relative;
+																															  top: -53px;
 																															  font-family: Helvetica;
 																															  font-weight: 600;
-																															  font-size: 13px;
-																															  color: #7D848E;
+																															  font-size: 11px;
+																															  color: #2C9ED4;
 																															  cursor: pointer;
-																															  margin-left: -198px;
 																															}
 
-																															#cancelSaveConvo:hover {
-																															  color: #BEC1C6;
+																															#createNewFolder:hover {
+																															  text-decoration: underline;
 																															}
 
-																															.messageLines {
-																															  line-height: 150%;
+																															#folderDropdown {
+																															  cursor: pointer;
+																															  border-radius: 1px;
+																															  color: #7D848E;
+																															  width: 478px;
+																															  height: 42px;
+																															  padding: 0px 52px;
+																															  font-size: 13px;
+																															  font-weight: 500;
+																															  font-family: Helvetica;
+																															  border: none;
+																															  outline: none;
+																															  -webkit-appearance: none;
+																															  -moz-appearance: none;
+																															  appearance: none;
+																															  box-shadow: 0px 1px 3px #D9D9D9;
+																															  background: url("https://preview.ibb.co/dqMMNv/Dropdown_BG.png") 0% / 100%;
+																															  position: relative;
+																															  margin: 0 0 15px 0;
 																															}`;
 
 				document.body.appendChild(canvas); // Imposes a low-opacity "canvas" on entire page
 				document.body.appendChild(saveDialog); // Prompts the "save" dialog
 
 				var saveForm = document.getElementById("saveForm");
-				var cancelButton = document.getElementById("cancelSaveConvo");
+				var exitButton = document.getElementById("registerExit");
+
+				var selected = document.getElementById("folderDropdown");
 
 				canvas.onclick = function() {
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
 
-				cancelButton.onclick = function() {
+				exitButton.onclick = function() {
 					document.body.removeChild(saveDialog);
 					document.body.removeChild(canvas);
 				}
 
 				saveForm.onsubmit = function() {
-					var name = (this).name.value;
-					//var folder = (this).folder.value; // TODO: Pull the folder name from selection in the dropdown
+					var name = (this).convoName.value;
+					var folder = selected.options[selected.selectedIndex].text;
 
 					window.postMessage({type: "save-input", value: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
 						if (event.data.type == 'save-confirmation' && event.data.value) {
-							// TODO: Implement a sweet alert notification for successfully saved convos
 							document.body.removeChild(saveDialog);
 							document.body.removeChild(canvas);
 						}
