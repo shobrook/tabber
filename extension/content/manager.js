@@ -1,4 +1,5 @@
 // TODO: Stylize the file manager
+// TODO: Move CUR_SELECTED update actions into function that will also disable "remove folder" button when root folder is selected
 
 /* GLOBALS */
 
@@ -41,7 +42,7 @@ var fileManager = function() {
 		}
 
 		var getFolderTreeView = function(folderList) {
-			var folderListHTML = "<ul><li class='tabberFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
+			var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]) + "</ul>";
 			return "<div style='overflow-y: auto; height: 200px; border: 1px solid #333;'> " + folderListHTML + " </div><br>";
 		}
@@ -193,7 +194,6 @@ var fileManager = function() {
 
 			// New folder <li>
 			var newFolder = document.createElement("li");
-			newFolder.classList.add("tabberFolder");
 			newFolder.innerHTML = "New Folder";
 			newFolder.style.color = "#7B7F84";
 			newFolder.contentEditable = "true";
@@ -202,13 +202,18 @@ var fileManager = function() {
 				if (e.key == "Enter") {
 					// Prevents duplicate folder names in the same parent folder
 					var duplicate = false;
-					for (var i = 0; i < CUR_SELECTED.nextSibling.childNodes.length; i++) {
-						console.log(CUR_SELECTED.nextSibling.childNodes[i]);
-						if (CUR_SELECTED.nextSibling.childNodes[i].innerText == this.innerText) {
+					// console.log(this.innerText);
+					for (var i = 0; i < currentFolderChildren.length; i++) {
+						// console.log(currentFolderChildren[i].innerText);
+						if (currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
 							console.log("Duplicate folder found. Cannot create folder.");
+							alert("There's already a folder inside " + parentName + " with that same name!");
+							e.preventDefault();
 							return;
 						}
 					}
+					// NOTE: We add the class here, otherwise it would detect itself as a duplicate
+					newFolder.classList.add("tabberFolder");
 					this.contentEditable = false;
 					window.postMessage({type: "add_folder", text: {name: this.innerText, parent: parentName}}, '*');
 					console.log("Added folder to database");
@@ -243,7 +248,7 @@ var fileManager = function() {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
 					window.postMessage({type: "rename_folder", text: {name: oldName, newName: this.innerText}}, '*');
-					console.log("Renamed folder in database")
+					console.log("Renamed folder in database");
 				}
 			})
 
@@ -264,8 +269,14 @@ var fileManager = function() {
 			// Sends delete folder request to server
 			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 
-			CUR_SELECTED.nextSibling.parentNode.removeChild(CUR_SELECTED.nextSibling);
-			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED);
+			// Don't delete the root folder
+			if (CUR_SELECTED.classList.contains("tabberRootFolder")) {
+				alert("You can't delete that folder!");
+				return;
+			}
+
+			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED.nextSibling); // Removes ul
+			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED); // Removes li
 		});
 
 		// Opens the referral dialog
