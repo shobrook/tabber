@@ -28,7 +28,7 @@ def get_all_content_recursive(mongo, folder):
 
 # TODO: Make this not atrociously inefficient
 def get_all_content(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
 	# TODO: Add "root" as a property for folders so that we can rename the top-level folder
@@ -41,7 +41,7 @@ def get_all_content(mongo, request_json):
 	return None
 
 def get_folders(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
 	folder_name_list = []
@@ -108,7 +108,7 @@ def add_user(mongo, request_json):
 # Adds folder under a specified parent folder
 # TODO: Check that we don't add duplicate folders
 def add_folder(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
 	folder_id = mongo.db.folders.insert({
@@ -127,7 +127,7 @@ def add_folder(mongo, request_json):
 	return str(folder_id)
 
 def add_conversation(mongo, request_json):
-	user = mongo.db.users.find_one({"authToken": request_json["authToken"]})
+	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
 	folder = mongo.db.folders.find_one({"name": request_json["folder"], "user_id": ObjectId(str(user["_id"]))})
@@ -149,27 +149,11 @@ def add_conversation(mongo, request_json):
 # EDITING
 
 def rename_folder(mongo, request_json):
-	mongo.db.folders.update_one({
-		"name": request_json["name"]},
-		{"$set": {"name": request_json["newName"]}
-	}, True)
-	return True
-
-def update_user(mongo, request_json):
-	user = mongo.db.users.find_one({
-		"email": request_json["email"],
-		"password": request_json["password"]
-	})
-	if not user_exists(user): return None
-
-	if request_json["authToken"] in user["authToken"]:
-		return False
-	else:
-		mongo.db.users.update_one({
-			"_id": ObjectId(str(user["_id"]))},
-			{"$push": {"authToken": request_json["authToken"]}
-		}, True)
-	return True
+  mongo.db.folders.update_one({
+    "name": request_json["name"]},
+    {"$set": {"name": request_json["newName"]}
+  }, True)
+  return True
 
 
 
@@ -232,6 +216,7 @@ def user_exists(user):
 
 
 
+# TODO: Remove authToken from these tests
 if __name__ == "__main__":
 
 	AUTH_ID = u'ya29.Glx6BP2MHLV0xcegcsPzy378uZmJo4kgygGturW8jrGCC80ygI8BcxhezpQhAXFjd4pK6Z1sDdHWq8N1P04DSh2H1zOJ18uvLyNAX3u50fCEdPufK7R5eXIkiyUP7g'
