@@ -2,6 +2,7 @@ from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
+import sys
 
 
 
@@ -28,9 +29,10 @@ def get_all_content_recursive(mongo, folder):
 # TODO: Make this not atrociously inefficient
 def get_all_content(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
 
 	# TODO: Add "root" as a property for folders so that we can rename the top-level folder
-	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "name": "root"})
+	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "root": True})
 
 	if root_folder:
 		return [get_all_content_recursive(mongo, root_folder)]
@@ -40,6 +42,8 @@ def get_all_content(mongo, request_json):
 
 def get_folders(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
 	folder_name_list = []
 	for folder in mongo.db.folders.find({"user_id": user["_id"]}):
 		folder_name_list.append(folder["name"])
@@ -84,7 +88,8 @@ def add_user(mongo, request_json):
 			return False;
 
 	root_id = mongo.db.folders.insert({
-		"name": "root",
+		"name": "Everything",
+		"root": True,
 		"children": [],
 		"conversations": []
 	})
@@ -101,11 +106,14 @@ def add_user(mongo, request_json):
 	return True;
 
 # Adds folder under a specified parent folder
+# TODO: Check that we don't add duplicate folders
 def add_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
 
 	folder_id = mongo.db.folders.insert({
 		"name": request_json["name"],
+		"root": False,
 		"children": [],
 		"conversations": [],
 		"user_id": ObjectId(str(user["_id"]))
@@ -120,6 +128,8 @@ def add_folder(mongo, request_json):
 
 def add_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
 	folder = mongo.db.folders.find_one({"name": request_json["folder"], "user_id": ObjectId(str(user["_id"]))})
 	convo = {
 		"name": request_json["name"],
@@ -136,24 +146,39 @@ def add_conversation(mongo, request_json):
 
 
 
+# EDITING
+
+def rename_folder(mongo, request_json):
+  mongo.db.folders.update_one({
+    "name": request_json["name"]},
+    {"$set": {"name": request_json["newName"]}
+  }, True)
+  return True
+
+
+
 # DELETING
 
-# TODO: Make this not horribly inefficient
+# TODO: Also remove from parent folder's conversations list
+# TODO: Use email to filter results
 def delete_conversation(mongo, request_json):
-	for conversation in mongo.db.conversations.find():
-		if conversation["name"] == request_json["name"]:
-			mongo.db.conversations.remove(conversation["_id"])
+	for conversation in mongo.db.conversations.find({"name": request_json["name"]}):
+		mongo.db.conversations.remove(conversation["_id"])
 	return True
 
 # TODO: Make this not horribly inefficient
 # TODO: Fix duplicate parent-child bug
+# TODO: Use email to filter results
 def delete_folder(mongo, request_json):
 	for folder in mongo.db.folders.find({"name": request_json["parent"]}):
 		for subfolder_id in folder["children"]:
 			subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
 			if subfolder["name"] == request_json["name"]:
+				# Don't delete the root folder
+				if subfolder["root"]:
+					return
 				mongo.db.folders.remove(subfolder_id)
-				folder["children"].remove(subfolder_id)
+				# folder["children"].remove(subfolder_id)
 				# print("folder['_id']: " + str(folder["_id"]))
 				# print("subfolder_id: " + str(subfolder_id))
 				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
@@ -182,8 +207,16 @@ def check_user(mongo, request_json):
 
 	return False
 
+# Gets rid of some boilerplate I didn't want to write for each function
+def user_exists(user):
+	if not user:
+		abort(401, str(sys._getframe(1).f_code.co_name) + "(): user doesn't exist or isn't logged in")
+		return False
+	return True
 
 
+
+# TODO: Remove authToken from these tests
 if __name__ == "__main__":
 
 	AUTH_ID = u'ya29.Glx6BP2MHLV0xcegcsPzy378uZmJo4kgygGturW8jrGCC80ygI8BcxhezpQhAXFjd4pK6Z1sDdHWq8N1P04DSh2H1zOJ18uvLyNAX3u50fCEdPufK7R5eXIkiyUP7g'
