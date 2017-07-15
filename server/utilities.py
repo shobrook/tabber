@@ -4,6 +4,8 @@ from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 import sys
 
+# TODO: Rewrite anything that uses folders to use new find_folder() function
+
 
 
 # GETTING
@@ -164,8 +166,19 @@ def move_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder_id = find_folder(user["_id"], request_json["path"])
-	print(folder_id)
+	folder, parent = find_folder(user["_id"], request_json["path"], parent=True)
+	new_parent = find_folder(user["_id"], request_json["newParentPath"])
+	if folder == None or parent == None or new_parent == None:
+		return False
+
+	new_parent = mongo.db.folders.update_one({"_id": new_parent["_id"]},
+		{"$push": {"children": ObjectId(str(folder["_id"]))}
+	}, True)
+	parent = mongo.db.folders.update_one({"_id": parent["_id"]},
+		{"$pull": {"children": ObjectId(str(folder["_id"]))}
+	}, True)
+
+	return True
 
 def move_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
@@ -221,22 +234,26 @@ def user_exists(user):
 	return True
 
 
-# Retrieves the final folder object in a filepath
-def find_folder(user_id, path):
+# Retrieves the final folder object in a filepath and, if specified, its parent
+def find_folder(user_id, path, parent=False):
 	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
 	cur_folder = root_folder
+	prev = root_folder
 	for folder_name in path.split("/")[1:]:
 		child_found = False
 		for subfolder_id in cur_folder["children"]:
 			subfolder = mongo.db.folders.find_one({"user_id": user_id, "_id": subfolder_id, "name": folder_name})
 			if subfolder is not None:
+				prev = cur_folder
 				cur_folder = subfolder
 				child_found = True
 				break
 		if not child_found:
 			print("ERROR: Could not find specified folder. Last correct folder name was " + str(cur_folder["name"]))
-			return None
-	return cur_folder
+			if parent: return None, None
+			else: return None
+	if parent: return cur_folder, prev
+	else: return cur_folder
 
 
 
@@ -271,5 +288,5 @@ if __name__ == "__main__":
 		# request_json = {"name": "New Folder", "parent": "root", "newParent": "root", "email": EMAIL}
 		# print("Removed folder status: " + str(delete_folder(mongo, request_json)))
 
-		request_json = {"path": "Every/Sub/New Folder","newParentPath": "Every", "email": "matthewrastovac@gmail.com"}
+		request_json = {"path": "Every/Sub1","newParentPath": "Every/New Folder", "email": "matthewrastovac@gmail.com"}
 		print("Moved folder status: " + str(move_folder(mongo, request_json)))
