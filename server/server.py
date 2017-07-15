@@ -25,7 +25,7 @@ mongo = PyMongo(app)
 """
 
 
-####ROUTING####
+# ROUTING
 
 
 # Default response; return an empty string

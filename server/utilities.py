@@ -26,6 +26,7 @@ def get_all_content_recursive(mongo, folder):
 
 	return {"name": folder["name"], "conversations": conversation_list, "children": children_list}
 
+
 # TODO: Make this not atrociously inefficient
 def get_all_content(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
@@ -40,6 +41,7 @@ def get_all_content(mongo, request_json):
 	abort(500, "get_all_content(): root folder for user " + user["email"] + " doesn't exist")
 	return None
 
+
 def get_folders(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
@@ -48,6 +50,7 @@ def get_folders(mongo, request_json):
 	for folder in mongo.db.folders.find({"user_id": user["_id"]}):
 		folder_name_list.append(folder["name"])
 	return folder_name_list
+
 
 def get_database(mongo):
 	users = []
@@ -105,6 +108,7 @@ def add_user(mongo, request_json):
 
 	return True;
 
+
 # Adds folder under a specified parent folder
 # TODO: Check that we don't add duplicate folders
 def add_folder(mongo, request_json):
@@ -125,6 +129,7 @@ def add_folder(mongo, request_json):
 	}, True)
 
 	return str(folder_id)
+
 
 def add_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
@@ -149,11 +154,22 @@ def add_conversation(mongo, request_json):
 # EDITING
 
 def rename_folder(mongo, request_json):
-  mongo.db.folders.update_one({
-    "name": request_json["name"]},
-    {"$set": {"name": request_json["newName"]}
-  }, True)
-  return True
+	mongo.db.folders.update_one({
+		"name": request_json["name"]},
+		{"$set": {"name": request_json["newName"]}
+		}, True)
+	return True
+
+def move_folder(mongo, request_json):
+	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
+	folder_id = find_folder(user["_id"], request_json["path"])
+	print(folder_id)
+
+def move_conversation(mongo, request_json):
+	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
 
 
 
@@ -165,6 +181,7 @@ def delete_conversation(mongo, request_json):
 	for conversation in mongo.db.conversations.find({"name": request_json["name"]}):
 		mongo.db.conversations.remove(conversation["_id"])
 	return True
+
 
 # TODO: Make this not horribly inefficient
 # TODO: Fix duplicate parent-child bug
@@ -187,25 +204,14 @@ def delete_folder(mongo, request_json):
 
 
 
-# EDITING
-
-def rename_folder(mongo, request_json):
-	mongo.db.folders.update_one({
-		"name": request_json["name"]},
-		{"$set": {"name": request_json["newName"]}
-	}, True)
-	return True
-
-
-
 # MISCELLANEOUS
 
 def check_user(mongo, request_json):
 	for u in mongo.db.users.find():
 		if u["email"] == request_json["email"] and u["password"] == request_json["password"]:
 			return True
-
 	return False
+
 
 # Gets rid of some boilerplate I didn't want to write for each function
 def user_exists(user):
@@ -215,11 +221,31 @@ def user_exists(user):
 	return True
 
 
+# Retrieves the final folder object in a filepath
+def find_folder(user_id, path):
+	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
+	cur_folder = root_folder
+	for folder_name in path.split("/")[1:]:
+		child_found = False
+		for subfolder_id in cur_folder["children"]:
+			subfolder = mongo.db.folders.find_one({"user_id": user_id, "_id": subfolder_id, "name": folder_name})
+			if subfolder is not None:
+				cur_folder = subfolder
+				child_found = True
+				break
+		if not child_found:
+			print("ERROR: Could not find specified folder. Last correct folder name was " + str(cur_folder["name"]))
+			return None
+	return cur_folder
+
+
+
 
 # TODO: Remove authToken from these tests
 if __name__ == "__main__":
 
 	AUTH_ID = u'ya29.Glx6BP2MHLV0xcegcsPzy378uZmJo4kgygGturW8jrGCC80ygI8BcxhezpQhAXFjd4pK6Z1sDdHWq8N1P04DSh2H1zOJ18uvLyNAX3u50fCEdPufK7R5eXIkiyUP7g'
+	EMAIL = "matthewrastovac@gmail.com"
 
 	import pprint
 	pp = pprint.PrettyPrinter(indent=2)
@@ -230,17 +256,20 @@ if __name__ == "__main__":
 	mongo = PyMongo(app)
 
 	with app.app_context():
-		# request_json = {u'authToken': AUTH_ID}
+		# request_json = {"email": EMAIL}
 		# pp.pprint(get_all_content(mongo, request_json))
 
-		request_json = {u'parent': 'root', u'name': 'New Folder', u'authToken': AUTH_ID}
-		print("Added folder: " + add_folder(mongo, request_json))
+		# request_json = {"parent": "root", "name": "New Folder", "email": EMAIL}
+		# print("Added folder: " + add_folder(mongo, request_json))
 
-		# request_json = {"name": "New Folder", "newName": "Renamed Folder", u'authToken': AUTH_ID}
+		# request_json = {"name": "New Folder", "newName": "Renamed Folder", "email": EMAIL}
 		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)
 
-		# request_json = {"name": "Works for me", u'authToken': AUTH_ID}
+		# request_json = {"name": "Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
 
-		request_json = {"name": "New Folder", "parent": "root", u'authToken': AUTH_ID}
-		print("Removed folder status: " + str(delete_folder(mongo, request_json)))
+		# request_json = {"name": "New Folder", "parent": "root", "newParent": "root", "email": EMAIL}
+		# print("Removed folder status: " + str(delete_folder(mongo, request_json)))
+
+		request_json = {"path": "Every/Sub/New Folder","newParentPath": "Every", "email": "matthewrastovac@gmail.com"}
+		print("Moved folder status: " + str(move_folder(mongo, request_json)))
