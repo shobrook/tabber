@@ -167,8 +167,15 @@ def add_conversation(mongo, request_json):
 # EDITING
 
 def rename_folder(mongo, request_json):
+	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
+	folder = find_folder(user["_id"], request_json["path"], parent=False)
+	if folder is None:
+		return None
+
 	mongo.db.folders.update_one({
-		"name": request_json["name"]},
+		"_id": folder["_id"]},
 		{"$set": {"name": request_json["newName"]}
 		}, True)
 	return True
@@ -288,11 +295,11 @@ if __name__ == "__main__":
 		# request_json = {"email": EMAIL}
 		# pp.pprint(get_all_content(mongo, request_json))
 
-		request_json = {"parentPath": "Every", "name": "Sub2", "email": EMAIL}
-		print("Added folder: " + str(add_folder(mongo, request_json)))
+		# request_json = {"parentPath": "Every", "name": "Sub2", "email": EMAIL}
+		# print("Added folder: " + str(add_folder(mongo, request_json)))
 
-		# request_json = {"path": "Every/New Folder", "newName": "Renamed Folder", "email": EMAIL}
-		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
+		request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
+		print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
 		#
 		# request_json = {"path": "Every/Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
