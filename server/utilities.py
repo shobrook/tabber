@@ -92,16 +92,17 @@ def add_user(mongo, request_json):
 		if u["email"] == request_json["email"]:
 			return False;
 
-	root_id = mongo.db.folders.insert({
-		"name": "Everything",
-		"root": True,
-		"children": [],
-		"conversations": []
-	})
 	user_id = mongo.db.users.insert({
 		"email": request_json["email"],
 		"password": request_json["password"],
 		"root": root_id
+	})
+	root_id = mongo.db.folders.insert({
+		"name": "Everything",
+		"root": True,
+		"children": [],
+		"conversations": [],
+		"user_id": user_id
 	})
 	mongo.db.folders.update_one({
 		"_id": root_id},
@@ -117,18 +118,22 @@ def add_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
+	# TODO: Check for duplicates in parent
+	parentName = request_json["path"].split("/")[-2]
+
 	folder_id = mongo.db.folders.insert({
 		"name": request_json["name"],
 		"root": False,
 		"children": [],
 		"conversations": [],
-		"user_id": ObjectId(str(user["_id"]))
+		"user_id": user["_id"]
 	})
+	print(parentName)
 	parentFolder = mongo.db.folders.update_one({
-		"name": request_json["parent"],
-		"user_id": ObjectId(str(user["_id"]))},
-		{"$push": {"children": ObjectId(str(folder_id))}
-	}, True)
+		"name": parentName,
+		"user_id": user["_id"]},
+		{"$push": {"children": folder_id}
+	}, upsert=False)
 
 	return str(folder_id)
 
@@ -239,6 +244,7 @@ def find_folder(user_id, path, parent=False):
 	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
 	cur_folder = root_folder
 	prev = root_folder
+	# NOTE: Assumes root folder is correctly placed as first in path
 	for folder_name in path.split("/")[1:]:
 		child_found = False
 		for subfolder_id in cur_folder["children"]:
@@ -276,17 +282,17 @@ if __name__ == "__main__":
 		# request_json = {"email": EMAIL}
 		# pp.pprint(get_all_content(mongo, request_json))
 
-		# request_json = {"parent": "root", "name": "New Folder", "email": EMAIL}
-		# print("Added folder: " + add_folder(mongo, request_json))
+		request_json = {"path": "Every/", "name": "Sub1", "email": EMAIL}
+		print("Added folder: " + add_folder(mongo, request_json))
 
-		# request_json = {"name": "New Folder", "newName": "Renamed Folder", "email": EMAIL}
-		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)
-
-		# request_json = {"name": "Works for me", "email": EMAIL}
+		# request_json = {"path": "Every/New Folder", "newName": "Renamed Folder", "email": EMAIL}
+		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
+		#
+		# request_json = {"path": "Every/Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
-
-		# request_json = {"name": "New Folder", "parent": "root", "newParent": "root", "email": EMAIL}
+		#
+		# request_json = {"path": "Every/New Folder", "parent": "root", "newParent": "root", "email": EMAIL}
 		# print("Removed folder status: " + str(delete_folder(mongo, request_json)))
 
-		request_json = {"path": "Every/Sub1","newParentPath": "Every/New Folder", "email": "matthewrastovac@gmail.com"}
-		print("Moved folder status: " + str(move_folder(mongo, request_json)))
+		# request_json = {"path": "Every/Sub1","newParentPath": "Every/New Folder", "email": "matthewrastovac@gmail.com"}
+		# print("Moved folder status: " + str(move_folder(mongo, request_json)))
