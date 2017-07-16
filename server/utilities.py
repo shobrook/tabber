@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 import sys
 
-# TODO: Rewrite anything that uses folders to use new find_folder() function
+# TODO: Use a decorator to check if the user exists
 
 
 
@@ -148,7 +148,10 @@ def add_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder = mongo.db.folders.find_one({"name": request_json["folder"], "user_id": ObjectId(str(user["_id"]))})
+	folder = find_folder(user["_id"], request_json["path"], parent=False)
+	if folder is None:
+		return None
+
 	convo = {
 		"name": request_json["name"],
 		"messages": request_json["messages"],
@@ -209,34 +212,29 @@ def move_conversation(mongo, request_json):
 # TODO: Also remove from parent folder's conversations list
 # TODO: Use email to filter results
 def delete_conversation(mongo, request_json):
-	for conversation in mongo.db.conversations.find({"name": request_json["name"]}):
-		mongo.db.conversations.remove(conversation["_id"])
+	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
+	convo = find_conversation(user["_id"], request_json[""], parent=False)
+	mongo.db.conversations.remove(conversation["_id"])
+
 	return True
 
 
-# TODO: Make this not horribly inefficient
-# TODO: Fix duplicate parent-child bug
-# TODO: Use email to filter results
 def delete_folder(mongo, request_json):
-	for folder in mongo.db.folders.find({"name": request_json["parent"]}):
-		for subfolder_id in folder["children"]:
-			subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
-			if subfolder["name"] == request_json["name"]:
-				# Don't delete the root folder
-				if subfolder["root"]:
-					return
-				mongo.db.folders.remove(subfolder_id)
-				# folder["children"].remove(subfolder_id)
-				# print("folder['_id']: " + str(folder["_id"]))
-				# print("subfolder_id: " + str(subfolder_id))
-				mongo.db.folders.update({"_id": folder["_id"]}, {"$pull": {"children": subfolder_id}})
-				return
+	user = mongo.db.users.find_one({"email": request_json["email"]})
+	if not user_exists(user): return None
+
+	folder, parent = find_folder(user["_id"], request_json["path"])
+	mongo.db.folders.remove(folder["_id"])
+	mongo.db.folders.update({"_id": parent["_id"]}, {"$pull": {"children": folder["_id"]}})
 	return True
 
 
 
 # MISCELLANEOUS
 
+# Authenticates a user
 def check_user(mongo, request_json):
 	for u in mongo.db.users.find():
 		if u["email"] == request_json["email"] and u["password"] == request_json["password"]:
@@ -270,9 +268,26 @@ def find_folder(user_id, path, parent=False):
 		if not child_found:
 			print("ERROR: Could not find specified folder. Last correct folder name was " + str(cur_folder["name"]))
 			if parent: return None, None
-			else: return None
+			return None
 	if parent: return cur_folder, prev
-	else: return cur_folder
+	return cur_folder
+
+# Retrieves the final folder object in a filepath and, if specified, its parent
+def find_conversation(user_id, path, parent=False):
+	convo_name = path.split("/")[-1]
+	parent_name = path.split("/")[-2]
+	potential_convos = mongo.db.conversations.find({"user_id": user_id, "name": True})
+	for convo in potential_convos:
+		folder = mongo.db.folders.find_one({
+			"_id": convo["parent"]
+		})
+		if folder["name"] == parent_name:
+			if parent:
+				return convo, folder
+			return convo
+	if parent:
+		return None, None
+	return None
 
 
 
@@ -298,8 +313,8 @@ if __name__ == "__main__":
 		# request_json = {"parentPath": "Every", "name": "Sub2", "email": EMAIL}
 		# print("Added folder: " + str(add_folder(mongo, request_json)))
 
-		request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
-		print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
+		# request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
+		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
 		#
 		# request_json = {"path": "Every/Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
