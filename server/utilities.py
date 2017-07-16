@@ -119,7 +119,15 @@ def add_folder(mongo, request_json):
 	if not user_exists(user): return None
 
 	# TODO: Check for duplicates in parent
-	parentName = request_json["path"].split("/")[-2]
+	parent = find_folder(user["_id"], request_json["parentPath"], parent=False)
+	if parent is None:
+		return None
+
+	for subfolder_id in parent["children"]:
+		subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
+		if subfolder["name"] == request_json["name"]:
+			print("ERROR: Attempted to add a duplicate folder.")
+			return None
 
 	folder_id = mongo.db.folders.insert({
 		"name": request_json["name"],
@@ -128,10 +136,8 @@ def add_folder(mongo, request_json):
 		"conversations": [],
 		"user_id": user["_id"]
 	})
-	print(parentName)
 	parentFolder = mongo.db.folders.update_one({
-		"name": parentName,
-		"user_id": user["_id"]},
+		"_id": parent["_id"]},
 		{"$push": {"children": folder_id}
 	}, upsert=False)
 
@@ -282,8 +288,8 @@ if __name__ == "__main__":
 		# request_json = {"email": EMAIL}
 		# pp.pprint(get_all_content(mongo, request_json))
 
-		request_json = {"path": "Every/", "name": "Sub1", "email": EMAIL}
-		print("Added folder: " + add_folder(mongo, request_json))
+		request_json = {"parentPath": "Every", "name": "Sub2", "email": EMAIL}
+		print("Added folder: " + str(add_folder(mongo, request_json)))
 
 		# request_json = {"path": "Every/New Folder", "newName": "Renamed Folder", "email": EMAIL}
 		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
