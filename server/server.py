@@ -54,7 +54,7 @@ def check_user():
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])
 def add_conversation():
-	# Request: {"email", "...", "name": "...", "folder": "...", "messages": [{"author": "...", "content": "..."}, ...]}
+	# Request: {"email", "...", "path": "/path/from/root/convo_name", "messages": [{"author": "...", "message": "..."}, ...]}
 	if not request.json or not "email" in request.json:
 		return abort(400, "add_conversation(): request.json does not exist or does not contain 'email'")
 
