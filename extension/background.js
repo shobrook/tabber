@@ -38,8 +38,6 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
-// Boolean for whether onboarding should be initiated
-var onboarding;
 // Boolean for whether signup should be initiated; NOTE: Set as "true" for testing only
 storage.set({"signup": true}, function() {
 	console.log("Signup is set to true.");
@@ -140,8 +138,7 @@ chrome.contextMenus.create({
 	}
 });
 
-// Creates "Sign In" in context menu and prompts file manager; NOTE: Testing only
-// TODO: Replace this with "Log Out" in the context menu
+// Creates "Sign In" in context menu and prompts file manager; NOTE: For testing only
 chrome.contextMenus.create({
 	title: "Sign Up",
 	contexts: ["browser_action"],
@@ -149,6 +146,22 @@ chrome.contextMenus.create({
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var activeTab = tabs[0];
 			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+		});
+	}
+});
+
+// Creates "Logout" in context menu and overwrites local user data
+chrome.contextMenus.create({
+	title: "Logout",
+	contexts: ["browser_action"],
+	onclick: function () {
+		storage.set({"credentials": 0}, function() {
+			storage.set({"signup": true}, function() {
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+				});
+			});
 		});
 	}
 });
