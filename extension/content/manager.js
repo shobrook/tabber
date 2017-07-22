@@ -52,8 +52,6 @@ var fileManager = function() {
 		// Gets the path of folder names from the root folder to the passed in element
 		var getFolderPath = function(folder) {
 			if (folder.classList.contains("tabberRootFolder")) return folder.innerText;
-			// console.log(folder.innerText);
-			// console.log(folder.parentNode.previousSibling.innerText);
 			return getFolderPath(folder.parentNode.previousSibling) + "/" + folder.innerText
 		}
 

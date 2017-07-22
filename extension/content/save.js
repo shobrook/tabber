@@ -478,8 +478,7 @@ var saveConversation = function() {
 				saveForm.onsubmit = function() {
 					var name = (this).convoName.value;
 					var folder = selected.options[selected.selectedIndex].text;
-
-					window.postMessage({type: "save-input", value: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
+					window.postMessage({type: "save-input", value: {"path": folder, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
 						if (event.data.type == 'save-confirmation' && event.data.value) {
 							document.body.removeChild(saveDialog);

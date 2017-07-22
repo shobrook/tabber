@@ -48,10 +48,7 @@ def get_folders(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder_name_list = []
-	for folder in mongo.db.folders.find({"user_id": user["_id"]}):
-		folder_name_list.append(folder["name"])
-	return folder_name_list
+	return all_folder_paths(mongo, user["_id"])
 
 
 def get_database(mongo):
@@ -257,7 +254,6 @@ def user_exists(user):
 
 # Retrieves the final folder object in a filepath and, if specified, its parent
 def find_folder(mongo, user_id, path, parent=True):
-	print(path)
 	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
 	cur_folder = root_folder
 	prev = root_folder
@@ -278,15 +274,14 @@ def find_folder(mongo, user_id, path, parent=True):
 	if parent: return cur_folder, prev
 	return cur_folder
 
+
 # Retrieves the final folder object in a filepath and, if specified, its parent
 def find_conversation(mongo, user_id, path, parent=False):
 	convo_name = path.split("/")[-1]
 	parent_name = path.split("/")[-2]
 	potential_convos = mongo.db.conversations.find({"user_id": user_id, "name": True})
 	for convo in potential_convos:
-		folder = mongo.db.folders.find_one({
-			"_id": convo["parent"]
-		})
+		folder = mongo.db.folders.find_one({"_id": convo["parent"]})
 		if folder["name"] == parent_name:
 			if parent:
 				return convo, folder
@@ -294,6 +289,24 @@ def find_conversation(mongo, user_id, path, parent=False):
 	if parent:
 		return None, None
 	return None
+
+
+# Recursive helper function for all_folder_paths()
+def all_folder_paths_recursive(mongo, cur_folder):
+	print(cur_folder["name"])
+	folder_list = []
+	folder_list.append(cur_folder["name"])
+	for subfolder_id in cur_folder["children"]:
+		subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
+		folder_list.extend([cur_folder["name"] + "/" + subfolder_name for subfolder_name in all_folder_paths_recursive(mongo, subfolder)])
+	print(folder_list)
+	return folder_list
+
+
+# Returns a list of paths to all folders
+def all_folder_paths(mongo, user_id):
+	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
+	return [subfolder_path for subfolder_path in all_folder_paths_recursive(mongo, root_folder)]
 
 
 
@@ -316,14 +329,17 @@ if __name__ == "__main__":
 		# request_json = {"email": EMAIL}
 		# pp.pprint(get_all_content(mongo, request_json))
 
+		request_json = {"email": EMAIL}
+		pp.pprint(get_folders(mongo, request_json))
+
 		# request_json = {"path": "Every/Sub2/SubSub1", "email": EMAIL}
 		# print("Added folder: " + str(add_folder(mongo, request_json)))
 
 		# request_json = {"path": "Every/Sub3", "messages": [{"author": "Matthew", "message": "Test"}], "email": EMAIL}
 		# print("Added conversation: " + str(add_conversation(mongo, request_json)))
 
-		request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
-		print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
+		# request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
+		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
 
 		# request_json = {"path": "Every/Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
