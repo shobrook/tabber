@@ -48,8 +48,7 @@ var POST = function(url, payload, callback) {
 	xhr.send(JSON.stringify(payload));
 }
 
-// Boolean for whether onboarding should be initiated
-var onboarding;
+// NOTE: Set to "true" for testing only
 storage.set({"signup": true}, function() {
 	console.log("Signup is set to true.");
 });

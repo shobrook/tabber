@@ -107,7 +107,7 @@ def get_database():
 # Renames the specified folder
 @app.route("/tabber/api/delete_folder", methods=["POST"])
 def delete_folder():
-	# Request: {"email": "...", "path/from/root/folder_name": "..."}
+	# Request: {"email": "...", "path": "path/from/root/folder_name"}
 	if not request.json or not "email" in request.json:
 		abort(400, "delete_folder(): request.json does not exist or does not contain 'email")
 

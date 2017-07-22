@@ -20,6 +20,7 @@ var fileManager = function() {
 	var openFileManager = function(folderList) {
 		console.log("Running file manager.");
 
+		// Recursive helper function for getFolderTreeView
 		var getFolderTreeViewRecursive = function(folder) {
 			var folderListHTML = "<ul style='margin-left: 15px;'>";
 			// NOTE: Switch the order of these loops to change whether conversations or subfolders come first
@@ -41,10 +42,19 @@ var fileManager = function() {
 			return folderListHTML + "</ul>";
 		}
 
+		// Returns a recursive tree view using nested lists of the folderList
 		var getFolderTreeView = function(folderList) {
 			var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]) + "</ul>";
 			return "<div style='overflow-y: auto; height: 200px; border: 1px solid #333;'> " + folderListHTML + " </div><br>";
+		}
+
+		// Gets the path of folder names from the root folder to the passed in element
+		var getFolderPath = function(folder) {
+			if (folder.classList.contains("tabberRootFolder")) return folder.innerText;
+			// console.log(folder.innerText);
+			// console.log(folder.parentNode.previousSibling.innerText);
+			return getFolderPath(folder.parentNode.previousSibling) + "/" + folder.innerText
 		}
 
 		// Adds event listeners for folders for left and double left click
@@ -197,7 +207,9 @@ var fileManager = function() {
 			newFolder.innerHTML = "New Folder";
 			newFolder.style.color = "#7B7F84";
 			newFolder.contentEditable = "true";
+			var parent = CUR_SELECTED;
 			var parentName = CUR_SELECTED.innerHTML;
+			var parentPath = getFolderPath(parent);
 			newFolder.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
 					// Prevents duplicate folder names in the same parent folder
@@ -215,7 +227,7 @@ var fileManager = function() {
 					// NOTE: We add the class here, otherwise it would detect itself as a duplicate
 					newFolder.classList.add("tabberFolder");
 					this.contentEditable = false;
-					window.postMessage({type: "add_folder", text: {name: this.innerText, parent: parentName}}, '*');
+					window.postMessage({type: "add_folder", text: {path: parentPath + "/" + this.innerText}}, '*');
 					console.log("Added folder to database");
 				}
 			});
@@ -244,10 +256,12 @@ var fileManager = function() {
 		renameFolderButton.addEventListener("click", function() {
 			CUR_SELECTED.contentEditable = true;
 			var oldName = CUR_SELECTED.innerText;
+			var folder = CUR_SELECTED;
+			var folderPath = getFolderPath(folder);
 			CUR_SELECTED.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
-					window.postMessage({type: "rename_folder", text: {name: oldName, newName: this.innerText}}, '*');
+					window.postMessage({type: "rename_folder", text: {path: folderPath, newName: this.innerText}}, '*');
 					console.log("Renamed folder in database");
 				}
 			})
@@ -267,7 +281,11 @@ var fileManager = function() {
 		removeFolderButton.addEventListener("click", function() {
 			console.log("Removing folder");
 			// Sends delete folder request to server
-			window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
+			// TODO: Get path
+			// window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
+			var folderPath = getFolderPath(CUR_SELECTED);
+			console.log(folderPath)
+			window.postMessage({type: "delete_folder", text: {path: folderPath}}, '*');
 
 			// Don't delete the root folder
 			if (CUR_SELECTED.classList.contains("tabberRootFolder")) {
@@ -344,9 +362,9 @@ window.addEventListener('message', function(event) {
 		return;
 	}
 	if (event.data.type == "get_conversations") getConversationsPort.postMessage();
-	else if (event.data.type == "add_folder") addFolderPort.postMessage({parent: event.data.text.parent, name: event.data.text.name});
-	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({name: event.data.text.name, newName: event.data.text.newName});
-	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({name: event.data.text.name, parent: event.data.text.parent});
+	else if (event.data.type == "add_folder") addFolderPort.postMessage({path: event.data.text.path});
+	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
+	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
 	else console.log("Invalid tabber server message");
 });

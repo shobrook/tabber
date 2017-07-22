@@ -515,8 +515,8 @@ chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 // Pulls conversation payload from JS injection and passes to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type == "save-input") {
-		console.log("Messages, labeled '" + event.data.value.name + "', sent to '" + event.data.value.folder + "'");
-		conversationPort.postMessage({name: event.data.value.name, folder: event.data.value.folder, messages: event.data.value.messages});
+		console.log("Messages labeled '" + event.data.value.path + " were sent.");
+		conversationPort.postMessage({path: event.data.value.path, messages: event.data.value.messages});
 	}
 });
 

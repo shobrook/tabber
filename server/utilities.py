@@ -119,7 +119,7 @@ def add_folder(mongo, request_json):
 	if not user_exists(user): return None
 
 	# TODO: Check for duplicates in parent
-	parent = find_folder(user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
+	parent = find_folder(mongo, user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
 	if parent is None:
 		return None
 
@@ -150,7 +150,7 @@ def add_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder = find_folder(user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
+	folder = find_folder(mongo, user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
 	if folder is None:
 		return None
 
@@ -175,7 +175,7 @@ def rename_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder = find_folder(user["_id"], request_json["path"], parent=False)
+	folder = find_folder(mongo, user["_id"], request_json["path"], parent=False)
 	if folder is None:
 		return None
 
@@ -189,8 +189,8 @@ def move_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder, parent = find_folder(user["_id"], request_json["path"], parent=True)
-	new_parent = find_folder(user["_id"], request_json["newParentPath"])
+	folder, parent = find_folder(mongo, user["_id"], request_json["path"], parent=True)
+	new_parent = find_folder(mongo, user["_id"], request_json["newParentPath"])
 	if folder == None or parent == None or new_parent == None:
 		return False
 
@@ -218,7 +218,7 @@ def delete_conversation(mongo, request_json):
 	if not user_exists(user): return None
 
 	# TODO: Remove reference in parent folder
-	convo = find_conversation(user["_id"], request_json[""], parent=False)
+	convo = find_conversation(mongo, user["_id"], request_json[""], parent=False)
 	if convo is not None:
 		mongo.db.conversations.remove(conversation["_id"])
 
@@ -229,7 +229,7 @@ def delete_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder, parent = find_folder(user["_id"], request_json["path"])
+	folder, parent = find_folder(mongo, user["_id"], request_json["path"])
 	if folder is not None and parent is not None:
 		mongo.db.folders.remove(folder["_id"])
 		mongo.db.folders.update({"_id": parent["_id"]}, {"$pull": {"children": folder["_id"]}})
@@ -256,7 +256,7 @@ def user_exists(user):
 
 
 # Retrieves the final folder object in a filepath and, if specified, its parent
-def find_folder(user_id, path, parent=True):
+def find_folder(mongo, user_id, path, parent=True):
 	print(path)
 	root_folder = mongo.db.folders.find_one({"user_id": user_id, "root": True})
 	cur_folder = root_folder
@@ -279,7 +279,7 @@ def find_folder(user_id, path, parent=True):
 	return cur_folder
 
 # Retrieves the final folder object in a filepath and, if specified, its parent
-def find_conversation(user_id, path, parent=False):
+def find_conversation(mongo, user_id, path, parent=False):
 	convo_name = path.split("/")[-1]
 	parent_name = path.split("/")[-2]
 	potential_convos = mongo.db.conversations.find({"user_id": user_id, "name": True})
@@ -322,14 +322,14 @@ if __name__ == "__main__":
 		# request_json = {"path": "Every/Sub3", "messages": [{"author": "Matthew", "message": "Test"}], "email": EMAIL}
 		# print("Added conversation: " + str(add_conversation(mongo, request_json)))
 
-		# request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
-		# print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
+		request_json = {"path": "Every/Sub2", "newName": "Renamed Folder", "email": EMAIL}
+		print("Renamed folder status: " + str(rename_folder(mongo, request_json)))
 
 		# request_json = {"path": "Every/Works for me", "email": EMAIL}
 		# print("Removed conversation status: " + str(delete_conversation(mongo, request_json)))
 
-		request_json = {"path": "Every/Renamed Folder", "email": EMAIL}
-		print("Removed folder status: " + str(delete_folder(mongo, request_json)))
+		# request_json = {"path": "Every/Renamed Folder", "email": EMAIL}
+		# print("Removed folder status: " + str(delete_folder(mongo, request_json)))
 
 		# request_json = {"path": "Every/SubSub1", "newPath": "Every/Sub2", "email": EMAIL}
 		# print("Moved folder status: " + str(move_folder(mongo, request_json)))
