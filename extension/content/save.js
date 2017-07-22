@@ -160,10 +160,12 @@ var saveConversation = function() {
 				var folderHTML = "";
 				var count = 0;
 				event.data.value.forEach(function(f) {
+					f_path = f.split("/")
+					f_name = f_path[f_path.length - 1]
 					if (count == 0)
-						folderHTML += "<option selected>" + f + "</option>";
+						folderHTML += "<option data-path=" + f_path + " selected>" + f_name + "</option>";
 					else
-						folderHTML += "<option>" + f + "</option>";
+						folderHTML += "<option data-path=" + f_path + ">" + f_name + "</option>";
 				});
 
 				// HTML generator for selected messages preview
@@ -209,7 +211,7 @@ var saveConversation = function() {
 				canvas.style.zIndex = "2147483647";
 				canvas.style.width = "100%";
 				canvas.style.height = "100%";
-			  canvas.style.top = "0px";
+				canvas.style.top = "0px";
 				canvas.style.left = "0px";
 				canvas.style.display = "block";
 				canvas.style.position = "absolute";
@@ -477,8 +479,8 @@ var saveConversation = function() {
 
 				saveForm.onsubmit = function() {
 					var name = (this).convoName.value;
-					var folder = selected.options[selected.selectedIndex].text;
-					window.postMessage({type: "save-input", value: {"path": folder, "messages": selectedMessages}}, '*');
+					var path = selected.options[selected.selectedIndex].dataset.path.replace(/,/g, "/");
+					window.postMessage({type: "save-input", value: {"path": path + "/" + name, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
 						if (event.data.type == 'save-confirmation' && event.data.value) {
 							document.body.removeChild(saveDialog);

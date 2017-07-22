@@ -147,6 +147,8 @@ def add_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
+	print(request_json)
+
 	folder = find_folder(mongo, user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
 	if folder is None:
 		return None
