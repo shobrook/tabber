@@ -16,7 +16,7 @@ chrome.identity.getAuthToken({interactive: true}, function(token) {
 });
 */
 
-// REST API endpoints
+// Dev REST API endpoints
 const NEW_USER = "http://localhost:5000/tabber/api/new_user";
 const CHECK_USER = "http://localhost:5000/tabber/api/check_user";
 const ADD_CONVERSATION = "http://localhost:5000/tabber/api/add_conversation";
@@ -25,6 +25,16 @@ const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
 const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
 const DELETE_FOLDER = "http://localhost:5000/tabber/api/delete_folder";
+
+// Prod REST API endpoints
+// const NEW_USER = "http://localhost:8080/tabber/api/new_user";
+// const CHECK_USER = "http://localhost:8080/tabber/api/check_user";
+// const ADD_CONVERSATION = "http://localhost:8080/tabber/api/add_conversation";
+// const GET_FOLDERS = "http://localhost:8080/tabber/api/get_folders";
+// const GET_CONVERSATIONS = "http://localhost:8080/tabber/api/get_conversations";
+// const ADD_FOLDER = "http://localhost:8080/tabber/api/add_folder";
+// const RENAME_FOLDER = "http://localhost:8080/tabber/api/rename_folder";
+// const DELETE_FOLDER = "http://localhost:8080/tabber/api/delete_folder";
 
 // Creates an HTTP POST request
 var POST = function(url, payload, callback) {
@@ -40,10 +50,9 @@ var POST = function(url, payload, callback) {
 
 // Boolean for whether onboarding should be initiated
 var onboarding;
-// Boolean for whether signup should be initiated; NOTE: Set as "true" for testing only
 storage.set({"signup": true}, function() {
 	console.log("Signup is set to true.");
-}); // NOTE: Set as "true" for testing only
+});
 
 /* MAIN */
 
@@ -221,7 +230,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 				port.postMessage({type: "save-confirmation", value: true});
 			}
 			storage.get("credentials", function(creds) {
-				POST(ADD_CONVERSATION, {"email": creds["credentials"]["email"], "name": msg.name, "folder": msg.folder, "messages": msg.messages}, convoCheck);
+				POST(ADD_CONVERSATION, {"email": creds["credentials"]["email"], "path": msg.path, "messages": msg.messages}, convoCheck);
 			});
 		} else if (port.name == "get-conversations") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -241,7 +250,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					console.log("Folder was (supposedly) added to the database.");
 				}
 				storage.get("credentials", function(creds) {
-					POST(ADD_FOLDER, {"email": creds["credentials"]["email"], "parent": msg.parent, "name": msg.name}, addedFolder);
+					POST(ADD_FOLDER, {"email": creds["credentials"]["email"], "path": msg.path}, addedFolder);
 				});
 			});
 		} else if (port.name == "rename-folder") {
@@ -251,7 +260,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					console.log("Folder was (supposedly) renamed.");
 				}
 				storage.get("credentials", function(creds) {
-					POST(RENAME_FOLDER, {"email": creds["credentials"]["email"], "name": msg.name, "newName": msg.newName}, renamedFolder);
+					POST(RENAME_FOLDER, {"email": creds["credentials"]["email"], "path": msg.path, "newName": msg.newName}, renamedFolder);
 				});
 			});
 		} else if (port.name == "delete-folder") {
@@ -261,7 +270,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					console.log("Folder was (supposedly) deleted.");
 				}
 				storage.get("credentials", function(creds) {
-					POST(DELETE_FOLDER, {"email": creds["credentials"]["email"], "name": msg.name, "parent": msg.parent}, deletedFolder);
+					POST(DELETE_FOLDER, {"email": creds["credentials"]["email"], "path": msg.path}, deletedFolder);
 				});
 			});
 		}

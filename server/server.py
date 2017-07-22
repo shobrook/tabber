@@ -54,7 +54,7 @@ def check_user():
 # Creates new conversation in specified folder; TODO: Fix this
 @app.route("/tabber/api/add_conversation", methods=["POST"])
 def add_conversation():
-	# Request: {"email", "...", "path": "/path/from/root/convo_name", "messages": [{"author": "...", "message": "..."}, ...]}
+	# Request: {"email", "...", "path": "path/from/root/convo_name", "messages": [{"author": "...", "message": "..."}, ...]}
 	if not request.json or not "email" in request.json:
 		return abort(400, "add_conversation(): request.json does not exist or does not contain 'email'")
 
@@ -63,13 +63,13 @@ def add_conversation():
 # Creates new folder given a parent directory
 @app.route("/tabber/api/add_folder", methods=["POST"])
 def add_folder():
-	# Request: {"email": "...", "parent": "...", "name": "..."}
+	# Request: {"email": "...", "path": "path/from/root/folder_name"}
 	if not request.json or not "email" in request.json:
 		abort(400, "add_folder(): request.json does not exist or does not contain 'email'")
 
 	return jsonify({"folder_id": utilities.add_folder(mongo, request.json)})
 
-# Returns user's folder names; TODO: Return top 10 most populated (or popular?) folders
+# Returns user's folder names
 @app.route("/tabber/api/get_folders", methods=["POST"])
 def get_folders():
 	# Request: {"email": "..."}
@@ -90,7 +90,7 @@ def get_conversations():
 # Renames the specified folder
 @app.route("/tabber/api/rename_folder", methods=["POST"])
 def rename_folder():
-	# Request: {"email": "...", "name": "...", "newName": "..."}
+	# Request: {"email": "...", "path": "path/from/root/folder_name", "newName": "..."}
 	if not request.json or not "email" in request.json:
 		abort(400, "rename_folder(): request.json does not exist or does not contain 'email'")
 
@@ -107,7 +107,7 @@ def get_database():
 # Renames the specified folder
 @app.route("/tabber/api/delete_folder", methods=["POST"])
 def delete_folder():
-	# Request: {"email": "...", "name": "...", "parentName"}
+	# Request: {"email": "...", "path/from/root/folder_name": "..."}
 	if not request.json or not "email" in request.json:
 		abort(400, "delete_folder(): request.json does not exist or does not contain 'email")
 
@@ -115,7 +115,7 @@ def delete_folder():
 
 
 
-####ERROR HANDLING####
+# ERROR HANDLING
 
 
 def error_print(status_code, error):
