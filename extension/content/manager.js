@@ -8,6 +8,7 @@ getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabbe
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
 deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
+deleteConversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-conversation"});
 inviteFriendPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "invite-friend"});
 
 /* MAIN */
@@ -281,18 +282,25 @@ var fileManager = function() {
 			// Sends delete folder request to server
 			// TODO: Get path
 			// window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
-			var folderPath = getFolderPath(CUR_SELECTED);
-			console.log(folderPath)
-			window.postMessage({type: "delete_folder", text: {path: folderPath}}, '*');
+			var path = getFolderPath(CUR_SELECTED);
+			if (CUR_SELECTED.classList.contains("tabberFolder")) {
+				window.postMessage({type: "delete_folder", text: {path: path}}, '*');
 
-			// Don't delete the root folder
-			if (CUR_SELECTED.classList.contains("tabberRootFolder")) {
-				alert("You can't delete that folder!");
-				return;
+				// Don't delete the root folder
+				if (CUR_SELECTED.classList.contains("tabberRootFolder")) {
+					alert("You can't delete that folder!");
+					return;
+				}
+
+				CUR_SELECTED.parentNode.removeChild(CUR_SELECTED.nextSibling); // Removes ul
+				CUR_SELECTED.parentNode.removeChild(CUR_SELECTED); // Removes li
 			}
+			else if (CUR_SELECTED.classList.contains("tabberConversation")) {
+				window.postMessage({type: "delete_conversation", text: {path: path}}, '*');
 
-			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED.nextSibling); // Removes ul
-			CUR_SELECTED.parentNode.removeChild(CUR_SELECTED); // Removes li
+				CUR_SELECTED.parentNode.removeChild(CUR_SELECTED.nextSibling); // Removes ul
+				CUR_SELECTED.parentNode.removeChild(CUR_SELECTED); // Removes li
+			}
 		});
 
 		// Opens the referral dialog
@@ -363,6 +371,7 @@ window.addEventListener('message', function(event) {
 	else if (event.data.type == "add_folder") addFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
 	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({path: event.data.text.path});
+	else if (event.data.type == "delete_conversation") deleteConversationPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
 	else console.log("Invalid tabber server message");
 });

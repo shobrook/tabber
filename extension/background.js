@@ -25,6 +25,7 @@ const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
 const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
 const DELETE_FOLDER = "http://localhost:5000/tabber/api/delete_folder";
+const DELETE_CONVERSATION = "http://localhost:5000/tabber/api/delete_conversation";
 
 // Prod REST API endpoints
 // const NEW_USER = "http://localhost:8080/tabber/api/new_user";
@@ -270,6 +271,17 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				storage.get("credentials", function(creds) {
 					POST(DELETE_FOLDER, {"email": creds["credentials"]["email"], "path": msg.path}, deletedFolder);
+				});
+			});
+		}
+		else if (port.name == "delete-conversation") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var deletedConversation = function() {
+					// TODO: Send confirmation to the content scripts
+					console.log("Conversation was (supposedly) deleted.");
+				}
+				storage.get("credentials", function(creds) {
+					POST(DELETE_CONVERSATION, {"email": creds["credentials"]["email"], "path": msg.path}, deletedConversation);
 				});
 			});
 		}

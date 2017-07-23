@@ -94,7 +94,7 @@ def rename_folder():
 	if not request.json or not "email" in request.json:
 		abort(400, "rename_folder(): request.json does not exist or does not contain 'email'")
 
-	return jsonify({"folders": utilities.rename_folder(mongo, request.json)})
+	return jsonify({"status": utilities.rename_folder(mongo, request.json)})
 
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
@@ -104,14 +104,23 @@ def get_database():
 
 # TODO: Add endpoints for renaming folders and conversations
 
-# Renames the specified folder
+# Deletes the specified folder
 @app.route("/tabber/api/delete_folder", methods=["POST"])
 def delete_folder():
 	# Request: {"email": "...", "path": "path/from/root/folder_name"}
 	if not request.json or not "email" in request.json:
 		abort(400, "delete_folder(): request.json does not exist or does not contain 'email")
 
-	return jsonify({"folders": utilities.delete_folder(mongo, request.json)})
+	return jsonify({"status": utilities.delete_folder(mongo, request.json)})
+
+# Deletes the specified conversation
+@app.route("/tabber/api/delete_conversation", methods=["POST"])
+def delete_conversation():
+	# Request: {"email": "...", "path": "path/from/root/conversation_name"}
+	if not request.json or not "email" in request.json:
+		abort(400, "delete_conversation(): request.json does not exist or does not contain 'email")
+
+	return jsonify({"status": utilities.delete_conversation(mongo, request.json)})
 
 
 
