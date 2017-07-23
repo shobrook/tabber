@@ -123,7 +123,6 @@ var saveConversation = function() {
 
 		// Filters messages through region bounds and append to selectedMessages
 		var filterMessages = function() {
-			// TODO: Should we grab messages that are partially within mask? Only works if message's top left is inside
 			messages.forEach(function(m) {
 				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
