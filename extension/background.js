@@ -150,7 +150,6 @@ chrome.contextMenus.create({
 });
 
 // Creates "Sign In" in context menu and prompts file manager; NOTE: Testing only
-// TODO: Replace this with "Log Out" in the context menu
 chrome.contextMenus.create({
 	title: "Sign Up",
 	contexts: ["browser_action"],
@@ -246,7 +245,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 		} else if (port.name == "add-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var addedFolder = function() {
-					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) added to the database.");
 				}
 				storage.get("credentials", function(creds) {
@@ -256,7 +254,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 		} else if (port.name == "rename-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var renamedFolder = function() {
-					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) renamed.");
 				}
 				storage.get("credentials", function(creds) {
@@ -266,7 +263,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 		} else if (port.name == "delete-folder") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var deletedFolder = function() {
-					// TODO: Send confirmation to the content scripts
 					console.log("Folder was (supposedly) deleted.");
 				}
 				storage.get("credentials", function(creds) {
@@ -277,7 +273,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 		else if (port.name == "delete-conversation") {
 			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 				var deletedConversation = function() {
-					// TODO: Send confirmation to the content scripts
 					console.log("Conversation was (supposedly) deleted.");
 				}
 				storage.get("credentials", function(creds) {
