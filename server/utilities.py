@@ -4,8 +4,6 @@ from flask import Flask, jsonify, request, json, abort
 from flask_pymongo import PyMongo
 import sys
 
-# TODO: Use a decorator to check if the user exists
-
 
 
 # GETTING
@@ -29,12 +27,10 @@ def get_all_content_recursive(mongo, folder):
 	return {"name": folder["name"], "conversations": conversation_list, "children": children_list}
 
 
-# TODO: Make this not atrociously inefficient
 def get_all_content(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	# TODO: Add "root" as a property for folders so that we can rename the top-level folder
 	root_folder = mongo.db.folders.find_one({"user_id": user["_id"], "root": True})
 
 	if root_folder:
@@ -110,12 +106,10 @@ def add_user(mongo, request_json):
 
 
 # Adds folder under a specified parent folder
-# TODO: Check that we don't add duplicate folders
 def add_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	# TODO: Check for duplicates in parent
 	parent = find_folder(mongo, user["_id"], "/".join(request_json["path"].split("/")[:-1]), parent=False)
 	if parent is None:
 		return None
@@ -208,8 +202,6 @@ def move_conversation(mongo, request_json):
 
 # DELETING
 
-# TODO: Also remove from parent folder's conversations list
-# TODO: Use email to filter results
 def delete_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
@@ -312,8 +304,6 @@ def all_folder_paths(mongo, user_id):
 
 
 
-
-# TODO: Remove authToken from these tests
 if __name__ == "__main__":
 
 	AUTH_ID = u'ya29.Glx6BP2MHLV0xcegcsPzy378uZmJo4kgygGturW8jrGCC80ygI8BcxhezpQhAXFjd4pK6Z1sDdHWq8N1P04DSh2H1zOJ18uvLyNAX3u50fCEdPufK7R5eXIkiyUP7g'

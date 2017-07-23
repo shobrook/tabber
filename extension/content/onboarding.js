@@ -11,8 +11,6 @@ var selectMessagesProtipPayload = function() {
 	var canvas = document.createElement('div');
 	var protip = document.createElement("div");
 
-	// TODO: Update font-family with Neuzeit S LT Std (imported locally)
-	// TODO: Add in a picture of the extension icon (probably change the line spacing too)
 	var tipDefs = `<div style="top: 5.5%; text-align: center; padding-top: 4%; position: relative;">
 										<h3 style="font-family: Helvetica; font-size: 15px; font-weight: 600; color: rgb(125,132,142);"> Welcome to the club :) </h3>
 										<p style="font-family: Helvetica; font-weight: 400; font-size: 14px; color: rgb(125,132,142); width: 79%; margin-left: auto; margin-right: auto;"> To get started, click the extension icon and select the messages you want to save.</p>
@@ -80,8 +78,6 @@ var fileManagerProtipPayload = function() {
 	var canvas = document.createElement('div');
 	var protip = document.createElement("div");
 
-	// TODO: Update font-family with Neuzeit S LT Std (imported locally)
-	// TODO: Add in a picture of the extension icon (probably change the line spacing too)
 	var tipDefs = `<div style="top: 5.5%; text-align: center; padding-top: 4%; position: relative;">
 										<h3 style="font-family: Helvetica; font-size: 15px; font-weight: 600; color: rgb(125,132,142);"> You just saved your first conversation! </h3>
 										<p style="font-family: Helvetica; font-weight: 400; font-size: 14px; color: rgb(125,132,142); width: 79%; margin-left: auto; margin-right: auto;"> Right-click the extension icon and select "Find Messages" to access your saved conversations. </p>
