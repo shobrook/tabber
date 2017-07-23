@@ -161,6 +161,22 @@ chrome.contextMenus.create({
 	}
 });
 
+// Creates "Logout" in context menu and overwrites local user data
+chrome.contextMenus.create({
+	title: "Logout",
+	contexts: ["browser_action"],
+	onclick: function () {
+		storage.set({"credentials": 0}, function() {
+			storage.set({"signup": true}, function() {
+				chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+					var activeTab = tabs[0];
+					chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
+				});
+			});
+		});
+	}
+});
+
 // Listens for long-lived port connections (from content scripts)
 chrome.runtime.onConnect.addListener(function(port) {
 	port.onMessage.addListener(function(msg) {
