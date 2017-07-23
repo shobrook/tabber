@@ -123,7 +123,6 @@ var saveConversation = function() {
 
 		// Filters messages through region bounds and append to selectedMessages
 		var filterMessages = function() {
-			// TODO: Should we grab messages that are partially within mask? Only works if message's top left is inside
 			messages.forEach(function(m) {
 				if (region.initial[0] < region.final[0] && region.initial[1] < region.final[1]) {
 					if ((m.coordinates[0] >= region.initial[0] && m.coordinates[0] <= region.final[0]) &&
@@ -160,10 +159,12 @@ var saveConversation = function() {
 				var folderHTML = "";
 				var count = 0;
 				event.data.value.forEach(function(f) {
+					f_path = f.split("/")
+					f_name = f_path[f_path.length - 1]
 					if (count == 0)
-						folderHTML += "<option selected>" + f + "</option>";
+						folderHTML += "<option data-path=" + f_path + " selected>" + f_name + "</option>";
 					else
-						folderHTML += "<option>" + f + "</option>";
+						folderHTML += "<option data-path=" + f_path + ">" + f_name + "</option>";
 				});
 
 				// HTML generator for selected messages preview
@@ -209,7 +210,7 @@ var saveConversation = function() {
 				canvas.style.zIndex = "2147483647";
 				canvas.style.width = "100%";
 				canvas.style.height = "100%";
-			  canvas.style.top = "0px";
+				canvas.style.top = "0px";
 				canvas.style.left = "0px";
 				canvas.style.display = "block";
 				canvas.style.position = "absolute";
@@ -477,9 +478,8 @@ var saveConversation = function() {
 
 				saveForm.onsubmit = function() {
 					var name = (this).convoName.value;
-					var folder = selected.options[selected.selectedIndex].text;
-
-					window.postMessage({type: "save-input", value: {"name": name, "folder": folder, "messages": selectedMessages}}, '*');
+					var path = selected.options[selected.selectedIndex].dataset.path.replace(/,/g, "/");
+					window.postMessage({type: "save-input", value: {"path": path + "/" + name, "messages": selectedMessages}}, '*');
 					window.addEventListener('message', function(event) {
 						if (event.data.type == 'save-confirmation' && event.data.value) {
 							document.body.removeChild(saveDialog);
@@ -515,8 +515,8 @@ chrome.runtime.onMessage.addListener(function(request, author, sendResponse) {
 // Pulls conversation payload from JS injection and passes to background script
 window.addEventListener('message', function(event) {
 	if (event.data.type == "save-input") {
-		console.log("Messages, labeled '" + event.data.value.name + "', sent to '" + event.data.value.folder + "'");
-		conversationPort.postMessage({name: event.data.value.name, folder: event.data.value.folder, messages: event.data.value.messages});
+		console.log("Messages labeled '" + event.data.value.path + " were sent.");
+		conversationPort.postMessage({path: event.data.value.path, messages: event.data.value.messages});
 	}
 });
 
