@@ -4,6 +4,7 @@ injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
+renameConversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-conversation"});
 deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
 deleteConversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-conversation"});
 inviteFriendPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "invite-friend"});
@@ -233,13 +234,19 @@ var fileManager = function() {
 		renameFolderButton.addEventListener("click", function() {
 			CUR_SELECTED.contentEditable = true;
 			var oldName = CUR_SELECTED.innerText;
-			var folder = CUR_SELECTED;
-			var folderPath = getFolderPath(folder);
+			var elem = CUR_SELECTED;
+			var path = getFolderPath(elem);
 			CUR_SELECTED.addEventListener("keydown", function(e) {
 				if (e.key == "Enter") {
 					this.contentEditable = false;
-					window.postMessage({type: "rename_folder", text: {path: folderPath, newName: this.innerText}}, '*');
-					console.log("Renamed folder in database");
+					if (elem.classList.contains("tabberFolder")) {
+						window.postMessage({type: "rename_folder", text: {path: path, newName: this.innerText}}, '*');
+						console.log("Renamed folder in database");
+					}
+					else if (elem.classList.contains("tabberConversation")) {
+						window.postMessage({type: "rename_conversation", text: {path: path, newName: this.innerText}}, '*');
+						console.log("Renamed conversation in database");
+					}
 				}
 			})
 
@@ -345,6 +352,7 @@ window.addEventListener('message', function(event) {
 	if (event.data.type == "get_conversations") getConversationsPort.postMessage();
 	else if (event.data.type == "add_folder") addFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
+	else if (event.data.type == "rename_conversation") renameConversationPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
 	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "delete_conversation") deleteConversationPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
