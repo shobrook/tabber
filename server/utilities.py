@@ -166,9 +166,15 @@ def rename_folder(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	folder = find_folder(mongo, user["_id"], request_json["path"], parent=False)
+	folder, parent = find_folder(mongo, user["_id"], request_json["path"])
 	if folder is None:
 		return False
+
+	for subfolder_id in parent["children"]:
+		subfolder = mongo.db.folders.find_one({"_id": subfolder_id})
+		if subfolder["name"] == request_json["newName"]:
+			print("ERROR: Attempted to rename a duplicate folder.")
+			return None
 
 	mongo.db.folders.update_one({
 		"_id": folder["_id"]},
@@ -181,9 +187,15 @@ def rename_conversation(mongo, request_json):
 	user = mongo.db.users.find_one({"email": request_json["email"]})
 	if not user_exists(user): return None
 
-	conversation = find_conversation(mongo, user["_id"], request_json["path"], parent=False)
+	conversation = find_conversation(mongo, user["_id"], request_json["path"])
 	if conversation is None:
 		return False
+
+	for convo_id_id in parent["conversations"]:
+		convo = mongo.db.folders.find_one({"_id": convo_id})
+		if convo["name"] == request_json["newName"]:
+			print("ERROR: Attempted to rename a duplicate conversation.")
+			return None
 
 	mongo.db.conversations.update_one({
 		"_id": conversation["_id"]},
