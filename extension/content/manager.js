@@ -43,13 +43,18 @@ var fileManager = function() {
 
 		// Returns a recursive tree view using nested lists of the folderList
 		var getFolderTreeView = function(folderList) {
-			var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
+			// Use this to show root
+			// NOTE: We keep the <li> for compatibility with getFolderPath()
+			// var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
+			var folderListHTML = "<ul style='margin-left: -15px;'><li class='tabberFolder tabberRootFolder' style='display: none;'></li>";
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]) + "</ul>";
 			return "<div style='overflow-y: auto; height: 200px; border: 1px solid #333;'> " + folderListHTML + " </div><br>";
 		}
 
 		// Gets the path of folder names from the root folder to the passed in element
+		// "/path/from/root/..."
 		var getFolderPath = function(folder) {
+			console.log(folder);
 			if (folder.classList.contains("tabberRootFolder")) return folder.innerText;
 			return getFolderPath(folder.parentNode.previousSibling) + "/" + folder.innerText
 		}
