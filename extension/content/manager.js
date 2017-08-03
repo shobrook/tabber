@@ -150,8 +150,8 @@ var fileManager = function() {
 		var currentFolderView = "<div style='height: 50px;'>\
 									<input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'>\
 									<input type='button' id='tabberAddFolder' value='+'>\
-									<input type='button' id='tabberRenameFolder' value='/'>\
-									<input type='button' id='tabberRemoveFolder' value='-'>\
+									<input type='button' id='tabberRename' value='/'>\
+									<input type='button' id='tabberRemove' value='-'>\
 									<input type='button' id='tabberInviteFriends' value='i'>\
 								</div>";
 		var folderTreeView = getFolderTreeView(folderList);
@@ -181,7 +181,7 @@ var fileManager = function() {
 		// Adds a subfolder under the currently selected folder
 		var addFolderButton = document.getElementById("tabberAddFolder");
 		addFolderButton.addEventListener("click", function() {
-			currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
+			var currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
 
 			// NOTE: Each conversation / folder has 2 corresponding elements: the <li> and the <ul> following it
 
@@ -199,7 +199,6 @@ var fileManager = function() {
 					var duplicate = false;
 					// console.log(this.innerText);
 					for (var i = 0; i < currentFolderChildren.length; i++) {
-						// console.log(currentFolderChildren[i].innerText);
 						if (currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
 							console.log("Duplicate folder found. Cannot create folder.");
 							alert("There's already a folder inside " + parentName + " with that same name!");
@@ -235,21 +234,43 @@ var fileManager = function() {
 		});
 
 		// Renames the currently selected folder
-		var renameFolderButton = document.getElementById("tabberRenameFolder");
-		renameFolderButton.addEventListener("click", function() {
+		var renameButton = document.getElementById("tabberRename");
+		renameButton.addEventListener("click", function() {
+			console.log("Renaming element");
 			CUR_SELECTED.contentEditable = true;
 			var oldName = CUR_SELECTED.innerText;
 			var elem = CUR_SELECTED;
 			var path = getFolderPath(elem);
-			CUR_SELECTED.addEventListener("keydown", function(e) {
+			var currentFolderChildren =	CUR_SELECTED.parentNode.childNodes;
+			var parentName = CUR_SELECTED.parentNode.previousSibling.innerText;
+			CUR_SELECTED.addEventListener("keydown", function rename_keydown(e) {
 				if (e.key == "Enter") {
-					this.contentEditable = false;
 					if (elem.classList.contains("tabberFolder")) {
+						for (var i = 0; i < currentFolderChildren.length; i++) {
+							if (currentFolderChildren[i].isContentEditable == false && currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
+								console.log("Duplicate folder found. Cannot rename folder.");
+								alert("There's already a folder inside " + parentName + " with that same name!");
+								e.preventDefault();
+								return;
+							}
+						}
+						this.contentEditable = false;
 						window.postMessage({type: "rename_folder", text: {path: path, newName: this.innerText}}, '*');
+						this.removeEventListener("keydown", rename_keydown);
 						console.log("Renamed folder in database");
 					}
 					else if (elem.classList.contains("tabberConversation")) {
+						for (var i = 0; i < currentFolderChildren.length; i++) {
+							if (currentFolderChildren[i].isContentEditable == false && currentFolderChildren[i].classList.contains("tabberConversation") && currentFolderChildren[i].innerText == this.innerText) {
+								console.log("Duplicate conversation found. Cannot rename conversation.");
+								alert("There's already a conversation inside " + parentName + " with that same name!");
+								e.preventDefault();
+								return;
+							}
+						}
+						this.contentEditable = false;
 						window.postMessage({type: "rename_conversation", text: {path: path, newName: this.innerText}}, '*');
+						this.removeEventListener("keydown", rename_keydown);
 						console.log("Renamed conversation in database");
 					}
 				}
@@ -265,9 +286,9 @@ var fileManager = function() {
 		});
 
 		// Removes the currently selected folder (and everything in it)
-		var removeFolderButton = document.getElementById("tabberRemoveFolder");
-		removeFolderButton.addEventListener("click", function() {
-			console.log("Removing folder");
+		var removeButton = document.getElementById("tabberRemove");
+		removeButton.addEventListener("click", function() {
+			console.log("Removing element");
 			// Sends delete folder request to server
 			// window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 			var path = getFolderPath(CUR_SELECTED);
