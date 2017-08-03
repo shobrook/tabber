@@ -104,6 +104,16 @@ def rename_folder():
 	return jsonify({"status": utilities.rename_folder(mongo, request.json)})
 
 
+# Renames the specified folder
+@app.route("/tabber/api/rename_conversation", methods=["POST"])
+def rename_conversation():
+	# Request: {"email": "...", "path": "path/from/root/folder_name", "newName": "..."}
+	if not request.json or not "email" in request.json:
+		abort(400, "rename_conversation(): request.json does not exist or does not contain 'email'")
+
+	return jsonify({"status": utilities.rename_conversation(mongo, request.json)})
+
+
 # Returns all database contents; for local testing only
 @app.route("/tabber/api/get_database", methods=["GET"])
 def get_database():
