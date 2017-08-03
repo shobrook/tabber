@@ -70,6 +70,21 @@ var saveConversation = function() {
 			tabber_svg.style.zIndex = "2147483647";
 			tabber_svg.style.cursor = "crosshair";
 
+			// https://stackoverflow.com/questions/18779354/assign-color-to-mouse-cursor-using-css
+			var cursor = document.createElement('canvas'),
+			ctx = cursor.getContext('2d');
+			cursor.width = 16;
+			cursor.height = 16;
+			ctx.strokeStyle = "#BBECFC";
+			ctx.lineWidth = 2;
+			ctx.moveTo(2, 10);
+			ctx.lineTo(2, 2);
+			ctx.lineTo(10, 2);
+			ctx.moveTo(2, 2);
+			ctx.lineTo(20, 20)
+			ctx.stroke();
+			tabber_svg.style.cursor = 'url(' + cursor.toDataURL() + '), auto';
+
 			tabber_mask = document.getElementById("mask");
 			tabber_clip = document.getElementById("clip");
 
