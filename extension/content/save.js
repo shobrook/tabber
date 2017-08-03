@@ -76,10 +76,13 @@ var saveConversation = function() {
 			// Allows user to interact with mask
 			tabber_mask.addEventListener("mousedown", startMask, false);
 			tabber_mask.addEventListener("mouseup", endMask, false);
+			document.addEventListener("keydown", cancelMask, false)
 		}
 
+		// Adds clip and attaches event mousemove listener
 		var startMask = function(e) {
-			region.initial = [e.pageX, e.pageY]; // Records initial coordinates in region array
+			console.log("Starting mask");
+			region.initial = [e.pageX, e.pageY];  // Records initial coordinates in region array
 
 			// Creates "hole" in mask and attaches resize listener
 			tabber_clip.setAttribute("x", e.pageX);
@@ -89,7 +92,9 @@ var saveConversation = function() {
 			tabber_mask.addEventListener("mousemove", resizeMask, false);
 		}
 
+		// Resizes the clip ("look-through box") when the user moves their mouse
 		var resizeMask = function(e) {
+			console.log("Resizing mask");
 			if (e.pageX - region.initial[0] > 0) tabber_clip.setAttribute("width", e.pageX - region.initial[0]);
 			else {
 				tabber_clip.setAttribute("x", e.pageX);
@@ -103,9 +108,12 @@ var saveConversation = function() {
 			}
 		}
 
+		// Removes mask and scrapes messages within clip
 		var endMask = function(e) {
+			console.log("Ending mask");
 			region.final = [e.pageX, e.pageY]; // Records final coordinates in region array
 			tabber_mask.removeEventListener("mousemove", resizeMask, false);
+			document.removeEventListener("keydown", cancelMask, false);
 
 			// NOTE: Naive cleanup. More to do based on how we handle user actions
 			// tabber_mask.parentNode.removeChild(tabber_mask);
@@ -114,6 +122,20 @@ var saveConversation = function() {
 
 			filterMessages();
 			console.log("Filtered scraped messages through selection bounds.")
+		}
+
+		// Cancels the mask without scraping messages
+		var cancelMask = function(e) {
+			if (e.keyCode == 27) {
+				console.log("Canceling mask");
+				tabber_mask.removeEventListener("mousemove", resizeMask, false);
+				document.removeEventListener("keydown", cancelMask, false);
+
+				// NOTE: Naive cleanup. More to do based on how we handle user actions
+				// tabber_mask.parentNode.removeChild(tabber_mask);
+				// tabber_clip.parentNode.removeChild(tabber_clip);
+				tabber_svg.parentNode.removeChild(tabber_svg);
+			}
 		}
 
 		initSVG();
