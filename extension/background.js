@@ -26,6 +26,7 @@ const GET_FOLDERS = "http://localhost:5000/tabber/api/get_folders";
 const GET_CONVERSATIONS = "http://localhost:5000/tabber/api/get_conversations";
 const ADD_FOLDER = "http://localhost:5000/tabber/api/add_folder";
 const RENAME_FOLDER = "http://localhost:5000/tabber/api/rename_folder";
+const RENAME_CONVERSATION = "http://localhost:5000/tabber/api/rename_conversation";
 const DELETE_FOLDER = "http://localhost:5000/tabber/api/delete_folder";
 const DELETE_CONVERSATION = "http://localhost:5000/tabber/api/delete_conversation";
 
@@ -280,6 +281,15 @@ chrome.runtime.onConnect.addListener(function(port) {
 				}
 				storage.get("credentials", function(creds) {
 					POST(RENAME_FOLDER, {"email": creds["credentials"]["email"], "path": msg.path, "newName": msg.newName}, renamedFolder);
+				});
+			});
+		} else if (port.name == "rename-conversation") {
+			chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+				var renamedConversation = function() {
+					console.log("Conversation was (supposedly) renamed.");
+				}
+				storage.get("credentials", function(creds) {
+					POST(RENAME_CONVERSATION, {"email": creds["credentials"]["email"], "path": msg.path, "newName": msg.newName}, renamedConversation);
 				});
 			});
 		} else if (port.name == "delete-folder") {

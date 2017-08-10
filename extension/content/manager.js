@@ -4,6 +4,7 @@ injectedFileManager = false;
 getConversationsPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "get-conversations"});
 addFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "add-folder"});
 renameFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-folder"});
+renameConversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "rename-conversation"});
 deleteFolderPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-folder"});
 deleteConversationPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "delete-conversation"});
 inviteFriendPort = chrome.runtime.connect(window.localStorage.getItem('tabber-id'), {name: "invite-friend"});
@@ -42,13 +43,18 @@ var fileManager = function() {
 
 		// Returns a recursive tree view using nested lists of the folderList
 		var getFolderTreeView = function(folderList) {
-			var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
+			// Use this to show root
+			// NOTE: We keep the <li> for compatibility with getFolderPath()
+			// var folderListHTML = "<ul><li class='tabberFolder tabberRootFolder' style='color: #7B7F84; margin: 0;'>" + folderList["folders"][0]["name"] + "</li>";
+			var folderListHTML = "<ul style='margin-left: -15px;'><li class='tabberFolder tabberRootFolder' style='display: none;'></li>";
 			folderListHTML += getFolderTreeViewRecursive(folderList["folders"][0]) + "</ul>";
 			return "<div style='overflow-y: auto; height: 200px; border: 1px solid #333;'> " + folderListHTML + " </div><br>";
 		}
 
 		// Gets the path of folder names from the root folder to the passed in element
+		// "/path/from/root/..."
 		var getFolderPath = function(folder) {
+			console.log(folder);
 			if (folder.classList.contains("tabberRootFolder")) return folder.innerText;
 			return getFolderPath(folder.parentNode.previousSibling) + "/" + folder.innerText
 		}
@@ -144,8 +150,8 @@ var fileManager = function() {
 		var currentFolderView = "<div style='height: 50px;'>\
 									<input type='text' id='currentFolderDisplay' placeholder='" + folderList["folders"][0]["name"] + "'>\
 									<input type='button' id='tabberAddFolder' value='+'>\
-									<input type='button' id='tabberRenameFolder' value='/'>\
-									<input type='button' id='tabberRemoveFolder' value='-'>\
+									<input type='button' id='tabberRename' value='/'>\
+									<input type='button' id='tabberRemove' value='-'>\
 									<input type='button' id='tabberInviteFriends' value='i'>\
 								</div>";
 		var folderTreeView = getFolderTreeView(folderList);
@@ -175,7 +181,7 @@ var fileManager = function() {
 		// Adds a subfolder under the currently selected folder
 		var addFolderButton = document.getElementById("tabberAddFolder");
 		addFolderButton.addEventListener("click", function() {
-			currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
+			var currentFolderChildren = CUR_SELECTED.nextSibling.childNodes; // List of following <ul> which has folder contents
 
 			// NOTE: Each conversation / folder has 2 corresponding elements: the <li> and the <ul> following it
 
@@ -193,7 +199,6 @@ var fileManager = function() {
 					var duplicate = false;
 					// console.log(this.innerText);
 					for (var i = 0; i < currentFolderChildren.length; i++) {
-						// console.log(currentFolderChildren[i].innerText);
 						if (currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
 							console.log("Duplicate folder found. Cannot create folder.");
 							alert("There's already a folder inside " + parentName + " with that same name!");
@@ -229,17 +234,45 @@ var fileManager = function() {
 		});
 
 		// Renames the currently selected folder
-		var renameFolderButton = document.getElementById("tabberRenameFolder");
-		renameFolderButton.addEventListener("click", function() {
+		var renameButton = document.getElementById("tabberRename");
+		renameButton.addEventListener("click", function() {
+			console.log("Renaming element");
 			CUR_SELECTED.contentEditable = true;
 			var oldName = CUR_SELECTED.innerText;
-			var folder = CUR_SELECTED;
-			var folderPath = getFolderPath(folder);
-			CUR_SELECTED.addEventListener("keydown", function(e) {
+			var elem = CUR_SELECTED;
+			var path = getFolderPath(elem);
+			var currentFolderChildren =	CUR_SELECTED.parentNode.childNodes;
+			var parentName = CUR_SELECTED.parentNode.previousSibling.innerText;
+			CUR_SELECTED.addEventListener("keydown", function rename_keydown(e) {
 				if (e.key == "Enter") {
-					this.contentEditable = false;
-					window.postMessage({type: "rename_folder", text: {path: folderPath, newName: this.innerText}}, '*');
-					console.log("Renamed folder in database");
+					if (elem.classList.contains("tabberFolder")) {
+						for (var i = 0; i < currentFolderChildren.length; i++) {
+							if (currentFolderChildren[i].isContentEditable == false && currentFolderChildren[i].classList.contains("tabberFolder") && currentFolderChildren[i].innerText == this.innerText) {
+								console.log("Duplicate folder found. Cannot rename folder.");
+								alert("There's already a folder inside " + parentName + " with that same name!");
+								e.preventDefault();
+								return;
+							}
+						}
+						this.contentEditable = false;
+						window.postMessage({type: "rename_folder", text: {path: path, newName: this.innerText}}, '*');
+						this.removeEventListener("keydown", rename_keydown);
+						console.log("Renamed folder in database");
+					}
+					else if (elem.classList.contains("tabberConversation")) {
+						for (var i = 0; i < currentFolderChildren.length; i++) {
+							if (currentFolderChildren[i].isContentEditable == false && currentFolderChildren[i].classList.contains("tabberConversation") && currentFolderChildren[i].innerText == this.innerText) {
+								console.log("Duplicate conversation found. Cannot rename conversation.");
+								alert("There's already a conversation inside " + parentName + " with that same name!");
+								e.preventDefault();
+								return;
+							}
+						}
+						this.contentEditable = false;
+						window.postMessage({type: "rename_conversation", text: {path: path, newName: this.innerText}}, '*');
+						this.removeEventListener("keydown", rename_keydown);
+						console.log("Renamed conversation in database");
+					}
 				}
 			})
 
@@ -253,9 +286,9 @@ var fileManager = function() {
 		});
 
 		// Removes the currently selected folder (and everything in it)
-		var removeFolderButton = document.getElementById("tabberRemoveFolder");
-		removeFolderButton.addEventListener("click", function() {
-			console.log("Removing folder");
+		var removeButton = document.getElementById("tabberRemove");
+		removeButton.addEventListener("click", function() {
+			console.log("Removing element");
 			// Sends delete folder request to server
 			// window.postMessage({type: "delete_folder", text: {name: CUR_SELECTED.innerText, parent: CUR_SELECTED.parentNode.previousSibling.innerText}}, '*');
 			var path = getFolderPath(CUR_SELECTED);
@@ -345,6 +378,7 @@ window.addEventListener('message', function(event) {
 	if (event.data.type == "get_conversations") getConversationsPort.postMessage();
 	else if (event.data.type == "add_folder") addFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "rename_folder") renameFolderPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
+	else if (event.data.type == "rename_conversation") renameConversationPort.postMessage({path: event.data.text.path, newName: event.data.text.newName});
 	else if (event.data.type == "delete_folder") deleteFolderPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "delete_conversation") deleteConversationPort.postMessage({path: event.data.text.path});
 	else if (event.data.type == "invite_friend") inviteFriendPort.postMessage();
