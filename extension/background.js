@@ -1,5 +1,7 @@
 /* GLOBALS */
 
+var FIRST_INSTALL;
+
 // For calling GET and SET to the extension's local storage
 var storage = chrome.storage.local;
 
@@ -56,12 +58,10 @@ storage.set({"signup": true}, function() {
 
 /* MAIN */
 
-// Prompts the sign-up dialog on "first-install"; provides handler for extension updates
-// QUESTION: Is a listener for a "first-load" of messenger.com needed? The "onInstalled" event
-// probably fires before a user visits messenger
 chrome.runtime.onInstalled.addListener(function(details) {
 	if (details.reason == "install") {
 		console.log("User has installed tabber for the first time on this device.");
+		FIRST_INSTALL = true;
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var activeTab = tabs[0];
 			chrome.tabs.sendMessage(activeTab.id, {"message": "prompt-signup"});
@@ -72,6 +72,12 @@ chrome.runtime.onInstalled.addListener(function(details) {
 	} else if (details.reason == "update") {
 		var thisVersion = chrome.runtime.getManifest().version;
 		console.log("Updated from " + details.previousVersion + " to " + thisVersion + " :)");
+	}
+});
+
+chrome.tabs.onUpdated.addListener(function(tabid, changeinfo, tab) {
+	if (tab.url == "https://www.messenger.com/" && FIRST_INSTALL) {
+// DO SHIT
 	}
 });
 

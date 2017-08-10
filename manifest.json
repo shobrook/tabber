@@ -7,7 +7,8 @@
     "contextMenus",
     "http://localhost:5000/tabber/api/*",
     "identity",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "oauth2": {
     "client_id": "557897042954-o3obikdtoprmoungto84a0jkgum3cahv.apps.googleusercontent.com",
